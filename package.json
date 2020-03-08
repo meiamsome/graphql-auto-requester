@@ -1,0 +1,43 @@
+{
+  "name": "graphql-auto-requester",
+  "version": "0.1.0",
+  "description": "An automatic graphql request builder based on used fields",
+  "main": "lib/index.js",
+  "dependencies": {},
+  "devDependencies": {
+    "@babel/preset-env": "^7.8.7",
+    "@babel/preset-typescript": "^7.8.3",
+    "@types/jest": "^25.1.4",
+    "@types/node": "^13.9.0",
+    "@typescript-eslint/eslint-plugin": "^2.22.0",
+    "@typescript-eslint/parser": "^2.22.0",
+    "jest": "^25.1.0",
+    "standardx": "^5.0.0",
+    "typescript": "^3.8.3"
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "jest src/.*\\.test\\.ts",
+    "lint": "standardx **/*.ts",
+    "prepare": "npm run build"
+  },
+  "author": "Oliver Wright <meiamsome@meiamso.me>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/meiamsome/graphql-auto-requester.git"
+  },
+  "eslintConfig": {
+    "rules": {
+      "no-unused-vars": "off",
+      "@typescript-eslint/no-unused-vars": "error"
+    }
+  },
+  "standardx": {
+    "env": ["jest"],
+    "parser": "@typescript-eslint/parser",
+    "plugins": [
+      "@typescript-eslint/eslint-plugin"
+    ]
+  }
+}
