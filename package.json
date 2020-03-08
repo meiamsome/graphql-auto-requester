@@ -3,7 +3,12 @@
   "version": "0.1.0",
   "description": "An automatic graphql request builder based on used fields",
   "main": "lib/index.js",
-  "dependencies": {},
+  "dependencies": {
+    "graphql-result-proxy": "^0.1.2"
+  },
+  "peerDependencies": {
+    "graphql": "~14"
+  },
   "devDependencies": {
     "@babel/preset-env": "^7.8.7",
     "@babel/preset-typescript": "^7.8.3",
@@ -11,6 +16,7 @@
     "@types/node": "^13.9.0",
     "@typescript-eslint/eslint-plugin": "^2.22.0",
     "@typescript-eslint/parser": "^2.22.0",
+    "graphql": "^14.6.0",
     "jest": "^25.1.0",
     "standardx": "^5.0.0",
     "typescript": "^3.8.3"
@@ -29,12 +35,15 @@
   },
   "eslintConfig": {
     "rules": {
+      "comma-dangle": ["error", "always-multiline"],
       "no-unused-vars": "off",
       "@typescript-eslint/no-unused-vars": "error"
     }
   },
   "standardx": {
-    "env": ["jest"],
+    "env": [
+      "jest"
+    ],
     "parser": "@typescript-eslint/parser",
     "plugins": [
       "@typescript-eslint/eslint-plugin"
