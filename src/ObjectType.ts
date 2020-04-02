@@ -9,7 +9,15 @@ import {
   SelectionSetNode,
   GraphQLList,
   GraphQLObjectType,
+  GraphQLField,
+  ArgumentNode,
+  coerceInputValue,
+  astFromValue,
 } from 'graphql'
+import {
+  digest,
+} from 'json-hash'
+
 import GraphQLAutoRequester from '.'
 import { lazyProperty } from './utils'
 
@@ -30,50 +38,81 @@ export default class AutoGraphQLObjectType {
     this.__typename = type.name
 
     for (const [fieldName, field] of Object.entries(this.type.getFields())) {
-      const type = field.type
-      let baseType = type
-      if (isNonNullType(type)) {
-        baseType = type.ofType
-      }
-      if (isAbstractType(baseType)) {
-        this._configureAbstractProperty(fieldName)
-      } else if (isLeafType(baseType)) {
-        lazyProperty(this, fieldName, () => this.resolveField(fieldName))
-      } else if (isListType(baseType)) {
-        this._configureListProperty(fieldName, baseType)
-      } else if (isObjectType(baseType)) {
-        const _baseType: GraphQLObjectType = baseType
-        if (isNonNullType(type)) {
-          lazyProperty(this, fieldName, () => new AutoGraphQLObjectType(
-            parent,
-            (selectionSet) => this.resolveField(fieldName, selectionSet),
-            _baseType,
-          ))
-        } else {
-          lazyProperty(this, fieldName, async () => {
-            const subField = new AutoGraphQLObjectType(
-              parent,
-              (selectionSet) => this.resolveField(fieldName, selectionSet),
-              _baseType,
-            )
-            const exists = await subField.resolveField('__typename')
-            if (!exists) {
-              return exists
+      if (field.args.length) {
+        // @ts-ignore
+        this[fieldName] = (args: any = {}) => {
+          const inputs: ArgumentNode[] = []
+          for (const argument of field.args) {
+            if (argument.defaultValue) {
+              args[argument.name] = args[argument.name] || argument.defaultValue
             }
-            return subField
-          })
+            const value = astFromValue(coerceInputValue(args[argument.name], argument.type), argument.type)!
+            inputs.push({
+              kind: Kind.ARGUMENT,
+              name: {
+                kind: Kind.NAME,
+                value: argument.name,
+              },
+              value,
+            })
+          }
+          const key = `${fieldName}_${digest(args)}`
+          if (!Object.prototype.hasOwnProperty.call(this, key)) {
+            this._configureProperty(key, fieldName, field, inputs)
+          }
+          // @ts-ignore
+          return this[key]
         }
       } else {
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const _exhaustiveCheck: never = baseType
-        throw new Error('unreachable code branch')
+        this._configureProperty(fieldName, fieldName, field)
       }
     }
   }
 
-  _configureAbstractProperty (fieldName: string) {
-    lazyProperty(this, fieldName, async () => {
-      const { __typename: typeName } = await this.resolveField(fieldName, {
+  _configureProperty (propertyName: string, fieldName: string, field: GraphQLField<any, any>, args?: ArgumentNode[]) {
+    const type = field.type
+    let baseType = type
+    if (isNonNullType(type)) {
+      baseType = type.ofType
+    }
+    if (isAbstractType(baseType)) {
+      this._configureAbstractProperty(propertyName, fieldName, args)
+    } else if (isLeafType(baseType)) {
+      lazyProperty(this, propertyName, () => this.resolveField(propertyName, fieldName, undefined, args))
+    } else if (isListType(baseType)) {
+      this._configureListProperty(propertyName, fieldName, baseType, args)
+    } else if (isObjectType(baseType)) {
+      const _baseType: GraphQLObjectType = baseType
+      if (isNonNullType(type)) {
+        lazyProperty(this, propertyName, () => new AutoGraphQLObjectType(
+          this.parent,
+          (selectionSet) => this.resolveField(propertyName, fieldName, selectionSet, args),
+          _baseType,
+        ))
+      } else {
+        lazyProperty(this, propertyName, async () => {
+          const subField = new AutoGraphQLObjectType(
+            this.parent,
+            (selectionSet) => this.resolveField(propertyName, fieldName, selectionSet, args),
+            _baseType,
+          )
+          const exists = await subField.resolveField('__typename', '__typename')
+          if (!exists) {
+            return exists
+          }
+          return subField
+        })
+      }
+    } else {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const _exhaustiveCheck: never = baseType
+      throw new Error('unreachable code branch')
+    }
+  }
+
+  _configureAbstractProperty (propertyName: string, fieldName: string, args?: ArgumentNode[]) {
+    lazyProperty(this, propertyName, async () => {
+      const { __typename: typeName } = await this.resolveField(propertyName, fieldName, {
         kind: Kind.SELECTION_SET,
         selections: [{
           kind: Kind.FIELD,
@@ -82,13 +121,13 @@ export default class AutoGraphQLObjectType {
             value: '__typename',
           },
         }],
-      })
+      }, args)
       if (!typeName) {
         return typeName
       }
 
       const concreteType = this.parent.schema.getTypeMap()[typeName] as GraphQLObjectType
-      return new AutoGraphQLObjectType(this.parent, (selectionSet) => this.resolveField(fieldName, {
+      return new AutoGraphQLObjectType(this.parent, (selectionSet) => this.resolveField(propertyName, fieldName, {
         kind: Kind.SELECTION_SET,
         selections: [{
           kind: Kind.INLINE_FRAGMENT,
@@ -101,18 +140,18 @@ export default class AutoGraphQLObjectType {
           },
           selectionSet,
         }],
-      }), concreteType)
+      }, args), concreteType)
     })
   }
 
-  _configureListProperty (fieldName: string, type: GraphQLList<any>) {
+  _configureListProperty (propertyName: string, fieldName: string, type: GraphQLList<any>, args?: ArgumentNode[]) {
     const namedType = getNamedType(type)
     if (isLeafType(namedType)) {
-      lazyProperty(this, fieldName, () => this.resolveField(fieldName))
+      lazyProperty(this, propertyName, () => this.resolveField(propertyName, fieldName, undefined, args))
       return
     }
-    lazyProperty(this, fieldName, async () => {
-      const list = await this.resolveField(fieldName, {
+    lazyProperty(this, propertyName, async () => {
+      const list = await this.resolveField(propertyName, fieldName, {
         kind: Kind.SELECTION_SET,
         selections: [{
           kind: Kind.FIELD,
@@ -121,7 +160,7 @@ export default class AutoGraphQLObjectType {
             value: '__typename',
           },
         }],
-      })
+      }, args)
 
       return list && list.map((element: any, index: number) => {
         if (!element) {
@@ -129,7 +168,7 @@ export default class AutoGraphQLObjectType {
         }
         const concreteType = this.parent.schema.getTypeMap()[element.__typename] as GraphQLObjectType
         return new AutoGraphQLObjectType(this.parent, async (selectionSet) => {
-          const result = await this.resolveField(fieldName, {
+          const result = await this.resolveField(propertyName, fieldName, {
             kind: Kind.SELECTION_SET,
             selections: [{
               kind: Kind.INLINE_FRAGMENT,
@@ -142,17 +181,22 @@ export default class AutoGraphQLObjectType {
               },
               selectionSet,
             }],
-          })
+          }, args)
           return result[index]
         }, concreteType)
       })
     })
   }
 
-  async resolveField (fieldName: string, selectionSet?: SelectionSetNode) {
+  async resolveField (propertyName: string, fieldName: string, selectionSet?: SelectionSetNode, args?: ArgumentNode[]) {
     const result = await this.execute({
       kind: Kind.SELECTION_SET,
       selections: [{
+        alias: propertyName !== fieldName ? {
+          kind: Kind.NAME,
+          value: propertyName,
+        } : undefined,
+        arguments: args,
         kind: Kind.FIELD,
         name: {
           kind: Kind.NAME,
@@ -162,6 +206,6 @@ export default class AutoGraphQLObjectType {
       }],
     })
 
-    return result[fieldName]
+    return result[propertyName]
   }
 }

@@ -1,6 +1,7 @@
 import { buildSchema } from 'graphql/utilities'
 
 import GraphQLAutoRequester from './index'
+import { GraphQLObjectType } from 'graphql'
 
 describe('GraphQLAutoRequester', () => {
   it('resolves a scalar field on Query correctly', async () => {
@@ -367,5 +368,186 @@ describe('GraphQLAutoRequester', () => {
     ])
 
     expect(requester._executionCount).toBe(2)
+  })
+
+  it('supports arguments to resolve a scalar', async () => {
+    const schema = buildSchema(`
+      type Query {
+        getResult(input: Int!): Int
+      }
+    `)
+    const fields = schema.getQueryType()!.getFields()
+    fields.getResult.resolve = (_, { input }) => input * 2
+
+    const requester = new GraphQLAutoRequester(schema)
+    const newQuery: any = requester.query
+    expect(newQuery).toBeDefined()
+
+    await Promise.all([
+      expect(newQuery.getResult({ input: 5 })).resolves.toBe(10),
+      expect(newQuery.getResult({ input: 4 })).resolves.toBe(8),
+      expect(() => newQuery.getResult()).toThrow('Invalid value undefined: Expected non-nullable type Int! not to be null'),
+    ])
+
+    expect(requester._executionCount).toBe(1)
+  })
+
+  it('supports argument result caching', async () => {
+    const schema = buildSchema(`
+      type Query {
+        getResult(input: Int!): Int
+      }
+    `)
+    const fields = schema.getQueryType()!.getFields()
+    fields.getResult.resolve = (_, { input }) => input * 2
+
+    const requester = new GraphQLAutoRequester(schema)
+    const newQuery: any = requester.query
+    expect(newQuery).toBeDefined()
+
+    await expect(newQuery.getResult({ input: 5 })).resolves.toBe(10)
+    await expect(newQuery.getResult({ input: 5 })).resolves.toBe(10)
+
+    expect(requester._executionCount).toBe(1)
+  })
+
+  it('supports optional arguments', async () => {
+    const schema = buildSchema(`
+      type Query {
+        getResult(input: Int): Int
+      }
+    `)
+    const fields = schema.getQueryType()!.getFields()
+    fields.getResult.resolve = (_, { input }) => (input || 4) * 2
+
+    const requester = new GraphQLAutoRequester(schema)
+    const newQuery: any = requester.query
+    expect(newQuery).toBeDefined()
+
+    await Promise.all([
+      expect(newQuery.getResult({ input: 5 })).resolves.toBe(10),
+      expect(newQuery.getResult({ input: 4 })).resolves.toBe(8),
+      expect(newQuery.getResult()).resolves.toBe(8),
+    ])
+
+    expect(requester._executionCount).toBe(1)
+  })
+
+  it('supports doing some deep queries automatically', async () => {
+    const schema = buildSchema(`
+      type X {
+        value: Int!
+        add(input: Int! = 1): X!
+        mult(input: Int!): X!
+        sub(input: Int!): X!
+      }
+      type Query {
+        getResult(input: Int!): X!
+      }
+    `)
+    const fields = schema.getQueryType()!.getFields()
+    fields.getResult.resolve = (_, { input }) => ({ value: input })
+    const xType = schema.getType('X')! as GraphQLObjectType
+    xType.getFields().add.resolve = ({ value }, { input }) => ({ value: value + input })
+    xType.getFields().mult.resolve = ({ value }, { input }) => ({ value: value * input })
+    xType.getFields().sub.resolve = ({ value }, { input }) => ({ value: value - input })
+
+    const requester = new GraphQLAutoRequester(schema)
+    const newQuery: any = requester.query
+    expect(newQuery).toBeDefined()
+
+    await Promise.all([
+      expect(newQuery.getResult({ input: 5 }).value).resolves.toBe(5),
+      expect(newQuery.getResult({ input: 4 }).value).resolves.toBe(4),
+      expect(
+        newQuery
+          .getResult({ input: 4 })
+          .add({ input: 10 })
+          .value
+      ).resolves.toBe(14),
+      expect(
+        newQuery
+          .getResult({ input: 4 })
+          .mult({ input: 9 })
+          .sub({ input: 3 })
+          .value
+      ).resolves.toBe(33),
+      expect(
+        newQuery
+          .getResult({ input: 4 })
+          .add()
+          .value
+      ).resolves.toBe(5),
+    ])
+
+    // This should be covered by the default value case above, not requesting another time
+    await expect(
+      newQuery
+        .getResult({ input: 4 })
+        .add({ input: 1 })
+        .value
+    ).resolves.toBe(5)
+
+    expect(requester._executionCount).toBe(1)
+  })
+
+  it('supports complex input types', async () => {
+    const schema = buildSchema(`
+      input Test {
+        unrequiredValue: Int
+        valueInt: Int!
+        valueFloat: Float!
+        valueBoolean: Boolean!
+        valueString: String!
+        optionalObject: Test
+      }
+
+      type Query {
+        getResult(input: Test!): Boolean
+      }
+    `)
+    const fields = schema.getQueryType()!.getFields()
+    fields.getResult.resolve = jest.fn(() => true)
+
+    const requester = new GraphQLAutoRequester(schema)
+    const newQuery: any = requester.query
+    expect(newQuery).toBeDefined()
+
+    await expect(newQuery.getResult({
+      input: {
+        valueInt: 5,
+        valueFloat: 5.0,
+        valueBoolean: true,
+        valueString: 'This is a string',
+        optionalObject: {
+          valueInt: 6,
+          valueFloat: 6.1,
+          valueBoolean: false,
+          valueString: 'This is also a string',
+        },
+      },
+    })).resolves.toBe(true)
+
+    expect(fields.getResult.resolve).toBeCalledWith(
+      undefined,
+      {
+        input: {
+          valueInt: 5,
+          valueFloat: 5.0,
+          valueBoolean: true,
+          valueString: 'This is a string',
+          optionalObject: {
+            valueInt: 6,
+            valueFloat: 6.1,
+            valueBoolean: false,
+            valueString: 'This is also a string',
+          },
+        },
+      },
+      undefined,
+      expect.anything(),
+    )
+
+    expect(requester._executionCount).toBe(1)
   })
 })

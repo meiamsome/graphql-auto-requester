@@ -4,7 +4,8 @@
   "description": "An automatic graphql request builder based on used fields",
   "main": "lib/index.js",
   "dependencies": {
-    "graphql-result-proxy": "^0.1.2"
+    "graphql-result-proxy": "^0.1.2",
+    "json-hash": "^1.2.0"
   },
   "peerDependencies": {
     "graphql": "~14"
@@ -35,7 +36,10 @@
   },
   "eslintConfig": {
     "rules": {
-      "comma-dangle": ["error", "always-multiline"],
+      "comma-dangle": [
+        "error",
+        "always-multiline"
+      ],
       "no-unused-vars": "off",
       "@typescript-eslint/no-unused-vars": "error"
     }
