@@ -1,3 +1,3 @@
-declare module "json-hash" {
+declare module 'json-hash' {
   function digest(parameter: any): string;
 }
