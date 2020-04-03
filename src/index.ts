@@ -18,9 +18,9 @@ export default class GraphQLAutoRequester {
     this.schema = schema
     this._executionCount = 0
 
-    const query = this.schema.getQueryType()
-    if (query) {
-      this.query = new AutoGraphQLObjectType(this, (selectionSet) => this.handleQuerySelectionSet(selectionSet), query)
+    const queryType = this.schema.getQueryType()
+    if (queryType) {
+      this.query = new AutoGraphQLObjectType(this, (selectionSet) => this.handleQuerySelectionSet(selectionSet), queryType)
     }
   }
 
