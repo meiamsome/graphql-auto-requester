@@ -4,7 +4,6 @@ import { GraphQLSchema, execute, DocumentNode, Kind, SelectionSetNode, Operation
 import { createResultProxy } from 'graphql-result-proxy'
 
 import AutoGraphQLObjectType from './ObjectType'
-import { lazyProperty } from './utils'
 
 export default class GraphQLAutoRequester {
   schema: GraphQLSchema
@@ -19,13 +18,10 @@ export default class GraphQLAutoRequester {
     this.schema = schema
     this._executionCount = 0
 
-    lazyProperty(this, 'query', () => {
-      const query = this.schema.getQueryType()
-      if (!query) {
-        return query
-      }
-      return new AutoGraphQLObjectType(this, (selectionSet) => this.handleQuerySelectionSet(selectionSet), query)
-    })
+    const query = this.schema.getQueryType()
+    if (query) {
+      this.query = new AutoGraphQLObjectType(this, (selectionSet) => this.handleQuerySelectionSet(selectionSet), query)
+    }
   }
 
   async execute (document: DocumentNode) {
