@@ -1,7 +1,7 @@
+import { GraphQLObjectType, print } from 'graphql'
 import { buildSchema } from 'graphql/utilities'
 
 import GraphQLAutoRequester from './index'
-import { GraphQLObjectType } from 'graphql'
 
 describe('GraphQLAutoRequester', () => {
   it('resolves a scalar field on Query correctly', async () => {
@@ -13,13 +13,14 @@ describe('GraphQLAutoRequester', () => {
     const fields = schema.getQueryType()!.getFields()
     fields.testQuery.resolve = () => 10
     const requester = new GraphQLAutoRequester(schema)
+    jest.spyOn(requester, 'execute')
     const newQuery: any = requester.query
 
     expect(newQuery).toBeDefined()
     expect(newQuery).toHaveProperty('testQuery')
     await expect(newQuery!.testQuery).resolves.toBe(10)
 
-    expect(requester._executionCount).toBe(1)
+    expect(requester.execute).toHaveBeenCalledTimes(1)
   })
 
   it('resolves an error on a scalar field on Query correctly', async () => {
@@ -33,13 +34,14 @@ describe('GraphQLAutoRequester', () => {
       throw new Error('test error')
     }
     const requester = new GraphQLAutoRequester(schema)
+    jest.spyOn(requester, 'execute')
     const newQuery: any = requester.query
 
     expect(newQuery).toBeDefined()
     expect(newQuery).toHaveProperty('testError')
     await expect(newQuery.testError).rejects.toThrow('test error')
 
-    expect(requester._executionCount).toBe(1)
+    expect(requester.execute).toHaveBeenCalledTimes(1)
   })
 
   it('resolves a scalar field on a non-null correctly', async () => {
@@ -54,6 +56,7 @@ describe('GraphQLAutoRequester', () => {
     const fields = schema.getQueryType()!.getFields()
     fields.testQuery.resolve = () => ({ answer: 10 })
     const requester = new GraphQLAutoRequester(schema)
+    jest.spyOn(requester, 'execute')
     const newQuery: any = requester.query
 
     expect(newQuery).toBeDefined()
@@ -61,7 +64,7 @@ describe('GraphQLAutoRequester', () => {
 
     await expect(newQuery.testQuery.answer).resolves.toBe(10)
 
-    expect(requester._executionCount).toBe(1)
+    expect(requester.execute).toHaveBeenCalledTimes(1)
   })
 
   it('resolves a scalar field on a deep non-null correctly', async () => {
@@ -83,6 +86,7 @@ describe('GraphQLAutoRequester', () => {
       return test
     }
     const requester = new GraphQLAutoRequester(schema)
+    jest.spyOn(requester, 'execute')
     const newQuery: any = requester.query
 
     expect(newQuery).toBeDefined()
@@ -90,7 +94,7 @@ describe('GraphQLAutoRequester', () => {
 
     await expect(newQuery.testQuery.test.test.test.test.answer).resolves.toBe(10)
 
-    expect(requester._executionCount).toBe(1)
+    expect(requester.execute).toHaveBeenCalledTimes(1)
   })
 
   it('resolves a scalar field on a nullable field correctly', async () => {
@@ -105,6 +109,7 @@ describe('GraphQLAutoRequester', () => {
     const fields = schema.getQueryType()!.getFields()
     fields.testQuery.resolve = () => ({ answer: 10 })
     const requester = new GraphQLAutoRequester(schema)
+    jest.spyOn(requester, 'execute')
     const newQuery: any = requester.query
 
     expect(newQuery).toBeDefined()
@@ -112,7 +117,7 @@ describe('GraphQLAutoRequester', () => {
 
     await expect((await newQuery.testQuery).answer).resolves.toBe(10)
 
-    expect(requester._executionCount).toBe(2)
+    expect(requester.execute).toHaveBeenCalledTimes(2)
   })
 
   it('resolves a scalar field on a nullable union correctly', async () => {
@@ -134,6 +139,7 @@ describe('GraphQLAutoRequester', () => {
       answer2: 10,
     })
     const requester = new GraphQLAutoRequester(schema)
+    jest.spyOn(requester, 'execute')
     const newQuery: any = requester.query
 
     expect(newQuery).toBeDefined()
@@ -141,7 +147,7 @@ describe('GraphQLAutoRequester', () => {
 
     await expect((await newQuery.testQuery).answer2).resolves.toBe(10)
 
-    expect(requester._executionCount).toBe(2)
+    expect(requester.execute).toHaveBeenCalledTimes(2)
   })
 
   it('resolves a scalar field on a union correctly', async () => {
@@ -163,6 +169,7 @@ describe('GraphQLAutoRequester', () => {
       answer2: 10,
     })
     const requester = new GraphQLAutoRequester(schema)
+    jest.spyOn(requester, 'execute')
     const newQuery: any = requester.query
 
     expect(newQuery).toBeDefined()
@@ -170,7 +177,7 @@ describe('GraphQLAutoRequester', () => {
 
     await expect((await newQuery.testQuery).answer2).resolves.toBe(10)
 
-    expect(requester._executionCount).toBe(2)
+    expect(requester.execute).toHaveBeenCalledTimes(2)
   })
 
   it('resolves a scalar field on a nullable interface correctly', async () => {
@@ -196,6 +203,7 @@ describe('GraphQLAutoRequester', () => {
       test2OnlyField: 10,
     })
     const requester = new GraphQLAutoRequester(schema)
+    jest.spyOn(requester, 'execute')
     const newQuery: any = requester.query
 
     expect(newQuery).toBeDefined()
@@ -208,7 +216,7 @@ describe('GraphQLAutoRequester', () => {
       expect(testQuery.test2OnlyField).resolves.toBe(10),
     ])
 
-    expect(requester._executionCount).toBe(2)
+    expect(requester.execute).toHaveBeenCalledTimes(2)
   })
 
   it('resolves a scalar field on an interface correctly', async () => {
@@ -234,6 +242,7 @@ describe('GraphQLAutoRequester', () => {
       test2OnlyField: 10,
     })
     const requester = new GraphQLAutoRequester(schema)
+    jest.spyOn(requester, 'execute')
     const newQuery: any = requester.query
 
     expect(newQuery).toBeDefined()
@@ -246,7 +255,7 @@ describe('GraphQLAutoRequester', () => {
       expect(testQuery.test2OnlyField).resolves.toBe(10),
     ])
 
-    expect(requester._executionCount).toBe(2)
+    expect(requester.execute).toHaveBeenCalledTimes(2)
   })
 
   it('resolves a scalar field on a nullable list of nulls correctly', async () => {
@@ -265,6 +274,7 @@ describe('GraphQLAutoRequester', () => {
       })
     )
     const requester = new GraphQLAutoRequester(schema)
+    jest.spyOn(requester, 'execute')
     const newQuery: any = requester.query
 
     expect(newQuery).toBeDefined()
@@ -281,7 +291,7 @@ describe('GraphQLAutoRequester', () => {
     expect(list.filter((x: any) => x)).toHaveLength(5)
 
     // TODO: This should only need 2 requests, with a data caching solution
-    expect(requester._executionCount).toBe(6)
+    expect(requester.execute).toHaveBeenCalledTimes(6)
   })
 
   it('resolves a scalar field on a nullable list of nullable unions correctly', async () => {
@@ -306,6 +316,7 @@ describe('GraphQLAutoRequester', () => {
       })
     )
     const requester = new GraphQLAutoRequester(schema)
+    jest.spyOn(requester, 'execute')
     const newQuery: any = requester.query
 
     expect(newQuery).toBeDefined()
@@ -326,7 +337,7 @@ describe('GraphQLAutoRequester', () => {
     }
 
     // TODO: This should only need 3 requests, with a data caching solution
-    expect(requester._executionCount).toBe(6)
+    expect(requester.execute).toHaveBeenCalledTimes(6)
   })
 
   it('resolves fields in parallel', async () => {
@@ -356,6 +367,7 @@ describe('GraphQLAutoRequester', () => {
     }
     fields.maybeGetTest.resolve = fields.getTest.resolve
     const requester = new GraphQLAutoRequester(schema)
+    jest.spyOn(requester, 'execute')
     const newQuery: any = requester.query
 
     expect(newQuery).toBeDefined()
@@ -367,7 +379,7 @@ describe('GraphQLAutoRequester', () => {
       newQuery.maybeGetTest.then((r: any) => expect(r.test.test.test.answer).resolves.toBe(10)),
     ])
 
-    expect(requester._executionCount).toBe(2)
+    expect(requester.execute).toHaveBeenCalledTimes(2)
   })
 
   it('supports arguments to resolve a scalar', async () => {
@@ -380,6 +392,7 @@ describe('GraphQLAutoRequester', () => {
     fields.getResult.resolve = (_, { input }) => input * 2
 
     const requester = new GraphQLAutoRequester(schema)
+    jest.spyOn(requester, 'execute')
     const newQuery: any = requester.query
     expect(newQuery).toBeDefined()
 
@@ -389,7 +402,7 @@ describe('GraphQLAutoRequester', () => {
       expect(() => newQuery.getResult()).toThrow('Invalid value undefined: Expected non-nullable type Int! not to be null'),
     ])
 
-    expect(requester._executionCount).toBe(1)
+    expect(requester.execute).toHaveBeenCalledTimes(1)
   })
 
   it('supports argument result caching', async () => {
@@ -402,13 +415,14 @@ describe('GraphQLAutoRequester', () => {
     fields.getResult.resolve = (_, { input }) => input * 2
 
     const requester = new GraphQLAutoRequester(schema)
+    jest.spyOn(requester, 'execute')
     const newQuery: any = requester.query
     expect(newQuery).toBeDefined()
 
     await expect(newQuery.getResult({ input: 5 })).resolves.toBe(10)
     await expect(newQuery.getResult({ input: 5 })).resolves.toBe(10)
 
-    expect(requester._executionCount).toBe(1)
+    expect(requester.execute).toHaveBeenCalledTimes(1)
   })
 
   it('supports optional arguments', async () => {
@@ -421,6 +435,7 @@ describe('GraphQLAutoRequester', () => {
     fields.getResult.resolve = (_, { input }) => (input || 4) * 2
 
     const requester = new GraphQLAutoRequester(schema)
+    jest.spyOn(requester, 'execute')
     const newQuery: any = requester.query
     expect(newQuery).toBeDefined()
 
@@ -430,7 +445,7 @@ describe('GraphQLAutoRequester', () => {
       expect(newQuery.getResult()).resolves.toBe(8),
     ])
 
-    expect(requester._executionCount).toBe(1)
+    expect(requester.execute).toHaveBeenCalledTimes(1)
   })
 
   it('supports doing some deep queries automatically', async () => {
@@ -453,6 +468,7 @@ describe('GraphQLAutoRequester', () => {
     xType.getFields().sub.resolve = ({ value }, { input }) => ({ value: value - input })
 
     const requester = new GraphQLAutoRequester(schema)
+    jest.spyOn(requester, 'execute')
     const newQuery: any = requester.query
     expect(newQuery).toBeDefined()
 
@@ -488,7 +504,7 @@ describe('GraphQLAutoRequester', () => {
         .value
     ).resolves.toBe(5)
 
-    expect(requester._executionCount).toBe(1)
+    expect(requester.execute).toHaveBeenCalledTimes(1)
   })
 
   it('supports complex input types', async () => {
@@ -510,6 +526,7 @@ describe('GraphQLAutoRequester', () => {
     fields.getResult.resolve = jest.fn(() => true)
 
     const requester = new GraphQLAutoRequester(schema)
+    jest.spyOn(requester, 'execute')
     const newQuery: any = requester.query
     expect(newQuery).toBeDefined()
 
@@ -548,6 +565,106 @@ describe('GraphQLAutoRequester', () => {
       expect.anything(),
     )
 
-    expect(requester._executionCount).toBe(1)
+    expect(requester.execute).toHaveBeenCalledTimes(1)
+  })
+
+  describe('The Collatz conjecture example', () => {
+    const expectedFirstRequest = `\
+{
+  getNumber_e6e96e2a313bcfc471e29e861bb52eec08b269b5: getNumber(input: 1) {
+    value
+  }
+  getNumber_7573e530abc31249331561cc8398fe9a777914a6: getNumber(input: 2) {
+    value
+  }
+  getNumber_c6878f25e074084c15daf696b7c3e9163d0ca854: getNumber(input: 4) {
+    value
+  }
+  getNumber_f57d96d77ca317fdffbaea09ecc1b37d140e2e5e: getNumber(input: 100) {
+    value
+  }
+  getNumber_354d91734f6d7607a3038b4b29141236d20afc33: getNumber(input: 3711) {
+    value
+  }
+}
+`
+    let requester: GraphQLAutoRequester
+    let query: any
+    beforeEach(() => {
+      const schema = buildSchema(`
+        type Num {
+          value: Int!
+          add(input: Int! = 1): Num!
+          div(input: Int!): Num!
+          mult(input: Int!): Num!
+          sub(input: Int!): Num!
+        }
+
+        type Query {
+          getNumber(input: Int!): Num!
+        }
+      `)
+      const fields = schema.getQueryType()!.getFields()
+      fields.getNumber.resolve = (_, { input }) => ({ value: input })
+      const numberType = schema.getType('Num')! as GraphQLObjectType
+      numberType.getFields().add.resolve = ({ value }, { input }) => ({ value: value + input })
+      numberType.getFields().div.resolve = ({ value }, { input }) => ({ value: Math.floor(value / input) })
+      numberType.getFields().mult.resolve = ({ value }, { input }) => ({ value: value * input })
+      numberType.getFields().sub.resolve = ({ value }, { input }) => ({ value: value - input })
+
+      requester = new GraphQLAutoRequester(schema)
+      jest.spyOn(requester, 'execute')
+      query = requester.query!
+    })
+
+    it('works for the recursive example', async () => {
+      const collatzRecursive = async (number: any): Promise<number> => {
+        const value = await number.value
+        if (value === 1) {
+          return 0
+        }
+        if (value % 2 === 0) {
+          return 1 + await collatzRecursive(number.div({ input: 2 }))
+        } else {
+          return 1 + await collatzRecursive(number.mult({ input: 3 }).add({ input: 1 }))
+        }
+      }
+
+      await Promise.all([
+        expect(collatzRecursive(query.getNumber({ input: 1 }))).resolves.toBe(0),
+        expect(collatzRecursive(query.getNumber({ input: 2 }))).resolves.toBe(1),
+        expect(collatzRecursive(query.getNumber({ input: 4 }))).resolves.toBe(2),
+        expect(collatzRecursive(query.getNumber({ input: 100 }))).resolves.toBe(25),
+        expect(collatzRecursive(query.getNumber({ input: 3711 }))).resolves.toBe(237),
+      ])
+
+      expect(requester.execute).toHaveBeenCalledTimes(238)
+      expect(print((requester.execute as any).mock.calls[0][0])).toBe(expectedFirstRequest)
+    })
+
+    it('works for the loop example', async () => {
+      const collatzLoop = async (number: any): Promise<number> => {
+        let steps
+        for (steps = 0; await number.value !== 1; steps++) {
+          if (await number.value % 2 === 0) {
+            number = number.div({ input: 2 })
+          } else {
+            number = number.mult({ input: 3 }).add({ input: 1 })
+          }
+        }
+        return steps
+      }
+
+      await Promise.all([
+        expect(collatzLoop(query.getNumber({ input: 1 }))).resolves.toBe(0),
+        expect(collatzLoop(query.getNumber({ input: 2 }))).resolves.toBe(1),
+        expect(collatzLoop(query.getNumber({ input: 4 }))).resolves.toBe(2),
+        expect(collatzLoop(query.getNumber({ input: 100 }))).resolves.toBe(25),
+        expect(collatzLoop(query.getNumber({ input: 3711 }))).resolves.toBe(237),
+      ])
+
+      expect(requester.execute).toHaveBeenCalledTimes(238)
+      expect(print((requester.execute as any).mock.calls[0][0])).toBe(expectedFirstRequest)
+    })
   })
 })
