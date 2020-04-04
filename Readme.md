@@ -57,8 +57,10 @@ query ($input: Int!) {
     div(input: 2) {
       value
     }
-    add(input: 1) {
-      value
+    mult(input: 3) {
+      add(input: 1) {
+        value
+      }
     }
   }
 }
@@ -73,7 +75,7 @@ const collatzByQuery = async (value) => {
   if (value % 2) {
     return 1 + await collatzByQuery(result.div.value)
   } else {
-    return 1 + await collatzByQuery(result.add.value)
+    return 1 + await collatzByQuery(result.mult.add.value)
   }
 }
 
@@ -94,7 +96,7 @@ const collatzAutoRequester = async (number) => {
   if (value % 2 === 0) {
     return 1 + await collatzAutoRequester(number.div({ input: 2 }))
   } else {
-    return 1 + await collatzAutoRequester(number.add({ input: 1 }))
+    return 1 + await collatzAutoRequester(number.mult({ input: 3 }).add({ input: 1 }))
   }
 }
 
