@@ -136,8 +136,6 @@ take the maximum step count (238) - and add one because we make a call out for t
 In particular, this is very useful for using a GraphQL service as a datasource in another GraphQL service. If we were
 to make a new service that had the following schema:
 ```graphql
-
-```graphql
 type Num {
   value: Int!
   square: Num!
