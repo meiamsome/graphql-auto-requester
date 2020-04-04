@@ -6,10 +6,10 @@ import { createResultProxy } from 'graphql-result-proxy'
 import AutoGraphQLObjectType from './ObjectType'
 import { lazyProperty } from './utils'
 
+export { default as AutoGraphQLObjectType } from './ObjectType'
+
 export default class GraphQLAutoRequester {
   schema: GraphQLSchema
-  // TODO: This should not live here
-  _executionCount: number
   _nextRequest?: DocumentNode
   _nextRequestPromise?: Promise<any>
 
@@ -17,7 +17,6 @@ export default class GraphQLAutoRequester {
 
   constructor (schema: GraphQLSchema) {
     this.schema = schema
-    this._executionCount = 0
 
     lazyProperty(this, 'query', () => {
       const query = this.schema.getQueryType()
@@ -33,7 +32,6 @@ export default class GraphQLAutoRequester {
       document,
       schema: this.schema,
     })
-    this._executionCount++
 
     return createResultProxy(result)
   }
