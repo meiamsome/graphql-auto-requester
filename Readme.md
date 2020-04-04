@@ -81,7 +81,7 @@ const collatzByQuery = async (value) => {
 
 // Calling example
 const steps = await collatzByQuery(100)
-console.log(steps) // 10
+console.log(steps) // 25
 ```
 There are some problems with this implementation, mainly that we are requesting the result of the division and of the
 addition when only one is ever required. We could make our queries smaller at the increased cost of code verbosity.
@@ -103,7 +103,7 @@ const collatzAutoRequester = async (number) => {
 // Calling example
 const requester = new GraphQLAutoRequester(schema)
 const steps = await collatzAutoRequester(requester.getNumber({ input: 100 }))
-console.log(steps) // 10
+console.log(steps) // 25
 ```
 
 ### Query Aggregation
