@@ -1,7 +1,6 @@
 # graphql-auto-requester
 
-`graphql-auto-requester` is a tool for making working with GraphQL requests a simpler and more efficient by only
-requesting fields that are required at any given time.
+`graphql-auto-requester` is a tool for making working with GraphQL requests simpler and more efficient by only requesting fields that are required at any given time.
 
 ## An Example
 
@@ -22,7 +21,7 @@ type Query {
 ```
 
 You would usually have to manually define your query, which could get complex depending upon your use case. Using the
-requester we are able to traverse the schema and onlty request data when it is required. For example:
+requester we can traverse the schema and only request data when it is required. For example:
 
 ```js
 const requester = new GraphQLAutoRequester(schema)
@@ -33,7 +32,7 @@ const result = await requester.query.getNumber({ input: 100 })
 console.log(result) // 550
 ```
 
-This is equivalent to the following GraphQL query (And this is the query that would be automatically executed)
+This is equivalent to the following GraphQL query:
 ```graphql
 query {
   getNumber(input: 100) {
@@ -46,9 +45,9 @@ query {
 }
 ```
 
-However, it is hard for us to implement a feature that explores the graph very deeply without having to struggle to
-maintain one query file that represents the superset of all options we may want to perform. This also means that when we
-request data, we will often be asking for more data than we need. For an example, let's try to implement the [Collatz
+However, it is hard for us to implement a feature that explores the graph very deeply without struggling to maintain
+one query file that represents the superset of all options we may want to perform. This also means that, when we request
+data, we will often be asking for more data than we need. For an example, let's try to implement the [Collatz
 conjecture](https://en.wikipedia.org/wiki/Collatz_conjecture) against this API. To be able to compute the Collatz
 conjecture we may consider something like the following:
 ```graphql
@@ -83,7 +82,7 @@ const collatzByQuery = async (value) => {
 const steps = await collatzByQuery(100)
 console.log(steps) // 25
 ```
-There are some problems with this implementation, mainly that we are requesting the result of the division and of the
+There are some problems with this implementation, mainly that we are requesting the results of both the division and the
 addition when only one is ever required. We could make our queries smaller at the increased cost of code verbosity.
 
 Alternatively, with `graphql-auto-requester` we could instead do:
@@ -107,9 +106,9 @@ console.log(steps) // 25
 ```
 
 ### Query Aggregation
-That may not seem like that dramatic a change, but it is when we start running queries in parallel that we get to use
-the full power of `graphql-auto-requester`. Fields that are requested in the same tick of the JS event loop will be
-bundled in to a single request.
+That may not seem like a dramatic change, but when we start running queries in parallel we get to use the full power of
+`graphql-auto-requester`. Fields that are requested in the same tick of the JS event loop will be bundled in to a single
+request.
 
 If we call the original function a couple of times in parallel:
 ```js
@@ -133,7 +132,7 @@ const results = await Promise.all([
 console.log(results) // [0, 216, 237]
 ```
 We get the same result, but we only execute 238 queries. This is because we bundle together all the queries, so we only
-take the maximum step count (238) - and add one because we make a call out for the initial `value` in this version.
+take the maximum step count (238) and add one because we make a call out for the initial `value` in this version.
 
 In particular, this is very useful for using a GraphQL service as a datasource in another GraphQL service. If we were
 to make a new service that had the following schema:
@@ -205,5 +204,5 @@ query {
 We would see 3 queries to the upstream GraphQL, as the mod and square branches are executed in parallel by the GraphQL
 executor on our new service.
 Importantly, the request for `__typename` does NOT result in a further request to the upstream service, as we can tell
-from the Schema that this is valid and do not need to execute a request for any subfields as `__typename` is simply
+from the schema that this is valid and there is no need to execute a request for any subfields as `__typename` is simply
 resolved.
