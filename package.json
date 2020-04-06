@@ -23,7 +23,7 @@
     "typescript": "^3.8.3"
   },
   "scripts": {
-    "build": "tsc",
+    "build": "tsc --declaration",
     "test": "jest src/.*\\.test\\.ts",
     "lint": "standardx **/*.ts",
     "prepare": "npm run build"
