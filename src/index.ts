@@ -7,7 +7,7 @@ import AutoGraphQLObjectType from './ObjectType'
 
 export { default as AutoGraphQLObjectType } from './ObjectType'
 
-export default class GraphQLAutoRequester {
+export class GraphQLAutoRequester {
   schema: GraphQLSchema
   _nextRequest?: DocumentNode
   _nextRequestPromise?: Promise<any>
@@ -69,3 +69,5 @@ export default class GraphQLAutoRequester {
     return this._nextRequestPromise!
   }
 }
+
+export default GraphQLAutoRequester
