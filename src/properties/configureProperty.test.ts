@@ -290,7 +290,7 @@ describe('configureProperty', () => {
     })
   })
 
-  it('Throws an error for an invalid type', () => {
+  it('throws an error for an invalid type', () => {
     const field: GraphQLField<any, any> = {
       args,
       description: '',
