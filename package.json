@@ -24,8 +24,10 @@
   },
   "scripts": {
     "build": "tsc --declaration",
-    "test": "jest src/.*\\.test\\.ts",
-    "lint": "standardx **/*.ts",
+    "test": "npm run test:unit && npm run test:integration",
+    "test:unit": "jest src/.*\\.test\\.ts",
+    "test:integration": "jest test/integration/.*\\.test\\.ts",
+    "lint": "standardx **/*.ts **/**/*.ts",
     "prepare": "npm run build"
   },
   "author": "Oliver Wright <meiamsome@meiamso.me>",
