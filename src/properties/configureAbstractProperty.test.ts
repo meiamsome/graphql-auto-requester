@@ -64,7 +64,7 @@ describe('configureAbstractProperty', () => {
       })
     })
 
-    describe('that are nullable', () => {
+    describe('that is nullable', () => {
       it('creates AutoGraphQLObjectType of the right concrete type when non-null', async () => {
         configureAbstractProperty(instance, propertyName, fieldName, inputArgs)
         expect(lazyProperty).toHaveBeenCalledTimes(1)
@@ -126,7 +126,7 @@ describe('configureAbstractProperty', () => {
       })
     })
 
-    describe('that are non-null', () => {
+    describe('that is non-null', () => {
       it('creates AutoGraphQLObjectType of the right concrete type when non-null', async () => {
         configureAbstractProperty(instance, propertyName, fieldName, inputArgs)
         expect(lazyProperty).toHaveBeenCalledTimes(1)
@@ -205,14 +205,14 @@ describe('configureAbstractProperty', () => {
     //   types: [unionedType1, unionedType2],
     // })
 
-    beforeAll(() => {
+    beforeEach(() => {
       ;(parent.schema.getTypeMap as jest.Mock).mockReturnValue({
         TestObject1: unionedType1,
         TestObject2: unionedType2,
       })
     })
 
-    describe('that are nullable', () => {
+    describe('that is nullable', () => {
       it('creates AutoGraphQLObjectType of the right concrete type when non-null', async () => {
         configureAbstractProperty(instance, propertyName, fieldName, inputArgs)
         expect(lazyProperty).toHaveBeenCalledTimes(1)
@@ -274,7 +274,7 @@ describe('configureAbstractProperty', () => {
       })
     })
 
-    describe('that are non-null', () => {
+    describe('that is non-null', () => {
       it('creates AutoGraphQLObjectType of the right concrete type when non-null', async () => {
         configureAbstractProperty(instance, propertyName, fieldName, inputArgs)
         expect(lazyProperty).toHaveBeenCalledTimes(1)
