@@ -205,7 +205,7 @@ describe('configureAbstractProperty', () => {
     //   types: [unionedType1, unionedType2],
     // })
 
-    beforeEach(() => {
+    beforeAll(() => {
       ;(parent.schema.getTypeMap as jest.Mock).mockReturnValue({
         TestObject1: unionedType1,
         TestObject2: unionedType2,

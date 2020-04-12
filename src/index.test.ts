@@ -9,7 +9,7 @@ jest.mock('graphql-result-proxy')
 jest.mock('./ObjectType')
 
 describe('GraphQLAutoRequester', () => {
-  it('Constructs without a Query Type', () => {
+  it('constructs without a Query Type', () => {
     const schema: GraphQLSchema = {
       getQueryType: () => null,
     } as GraphQLSchema
@@ -18,7 +18,7 @@ describe('GraphQLAutoRequester', () => {
     expect(requester).not.toHaveProperty('query')
   })
 
-  it('Constructs with a Query Type', () => {
+  it('constructs with a Query Type', () => {
     const schema: GraphQLSchema = {
       getQueryType: () => ({}),
     } as GraphQLSchema
@@ -37,7 +37,7 @@ describe('GraphQLAutoRequester', () => {
     const requester = new GraphQLAutoRequester(schema)
 
     describe('execute', () => {
-      it('Forwards to graphql-js execute, and creates a result proxy', async () => {
+      it('forwards to graphql-js execute, and creates a result proxy', async () => {
         const intermediate = Symbol('inter')
         ;(execute as jest.Mock).mockResolvedValue(intermediate)
         const result = Symbol('result')
@@ -66,7 +66,7 @@ describe('GraphQLAutoRequester', () => {
         ;(requester.execute as jest.Mock).mockReset()
       })
 
-      it('Creates the next request', async () => {
+      it('creates the next request', async () => {
         requester._nextRequest = null
         requester._nextRequestPromise = null
         requester.createNextRequest()
