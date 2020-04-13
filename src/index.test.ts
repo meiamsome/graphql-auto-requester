@@ -1,670 +1,152 @@
-import { GraphQLObjectType, print } from 'graphql'
-import { buildSchema } from 'graphql/utilities'
+import { GraphQLSchema, execute, DocumentNode, Kind, SelectionNode, OperationDefinitionNode } from 'graphql'
+// @ts-ignore There are no typings for this module
+import { createResultProxy } from 'graphql-result-proxy'
+import AutoGraphQLObjectType from './ObjectType'
 
-import GraphQLAutoRequester from './index'
+import GraphQLAutoRequester from '.'
+jest.mock('graphql')
+jest.mock('graphql-result-proxy')
+jest.mock('./ObjectType')
 
 describe('GraphQLAutoRequester', () => {
-  it('resolves a scalar field on Query correctly', async () => {
-    const schema = buildSchema(`
-      type Query {
-        testQuery: Int
-      }
-    `)
-    const fields = schema.getQueryType()!.getFields()
-    fields.testQuery.resolve = () => 10
+  it('constructs without a Query Type', () => {
+    const schema: GraphQLSchema = {
+      getQueryType: () => null,
+    } as GraphQLSchema
+
     const requester = new GraphQLAutoRequester(schema)
-    jest.spyOn(requester, 'execute')
-    const newQuery: any = requester.query
-
-    expect(newQuery).toBeDefined()
-    expect(newQuery).toHaveProperty('testQuery')
-    await expect(newQuery!.testQuery).resolves.toBe(10)
-
-    expect(requester.execute).toHaveBeenCalledTimes(1)
+    expect(requester).not.toHaveProperty('query')
   })
 
-  it('resolves an error on a scalar field on Query correctly', async () => {
-    const schema = buildSchema(`
-      type Query {
-        testError: Int
-      }
-    `)
-    const fields = schema.getQueryType()!.getFields()
-    fields.testError.resolve = () => {
-      throw new Error('test error')
-    }
+  it('constructs with a Query Type', () => {
+    const schema: GraphQLSchema = {
+      getQueryType: () => ({}),
+    } as GraphQLSchema
+
+    ;(AutoGraphQLObjectType as jest.Mock).mockReturnValueOnce({})
+
     const requester = new GraphQLAutoRequester(schema)
-    jest.spyOn(requester, 'execute')
-    const newQuery: any = requester.query
-
-    expect(newQuery).toBeDefined()
-    expect(newQuery).toHaveProperty('testError')
-    await expect(newQuery.testError).rejects.toThrow('test error')
-
-    expect(requester.execute).toHaveBeenCalledTimes(1)
+    expect(requester).toHaveProperty('query')
   })
 
-  it('resolves a scalar field on a non-null correctly', async () => {
-    const schema = buildSchema(`
-      type Test {
-        answer: Int
-      }
-      type Query {
-        testQuery: Test!
-      }
-    `)
-    const fields = schema.getQueryType()!.getFields()
-    fields.testQuery.resolve = () => ({ answer: 10 })
+  describe('without a query type', () => {
+    const schema: GraphQLSchema = {
+      getQueryType: () => null,
+    } as GraphQLSchema
+
     const requester = new GraphQLAutoRequester(schema)
-    jest.spyOn(requester, 'execute')
-    const newQuery: any = requester.query
 
-    expect(newQuery).toBeDefined()
-    expect(newQuery).toHaveProperty('testQuery')
+    describe('execute', () => {
+      it('forwards to graphql-js execute, and creates a result proxy', async () => {
+        const intermediate = Symbol('inter')
+        ;(execute as jest.Mock).mockResolvedValue(intermediate)
+        const result = Symbol('result')
+        ;(createResultProxy as jest.Mock).mockResolvedValue(result)
 
-    await expect(newQuery.testQuery.answer).resolves.toBe(10)
+        const document: DocumentNode = Symbol('documentNode') as any as DocumentNode
+        await expect(requester.execute(document)).resolves.toBe(result)
 
-    expect(requester.execute).toHaveBeenCalledTimes(1)
-  })
+        expect(createResultProxy).toHaveBeenCalledTimes(1)
+        expect(createResultProxy).toHaveBeenCalledWith(intermediate)
 
-  it('resolves a scalar field on a deep non-null correctly', async () => {
-    const schema = buildSchema(`
-      type Test {
-        answer: Int
-        test: Test!
-      }
-      type Query {
-        testQuery: Test!
-      }
-    `)
-    const fields = schema.getQueryType()!.getFields()
-    fields.testQuery.resolve = () => {
-      const test: any = {
-        answer: 10,
-      }
-      test.test = test
-      return test
-    }
-    const requester = new GraphQLAutoRequester(schema)
-    jest.spyOn(requester, 'execute')
-    const newQuery: any = requester.query
-
-    expect(newQuery).toBeDefined()
-    expect(newQuery).toHaveProperty('testQuery')
-
-    await expect(newQuery.testQuery.test.test.test.test.answer).resolves.toBe(10)
-
-    expect(requester.execute).toHaveBeenCalledTimes(1)
-  })
-
-  it('resolves a scalar field on a nullable field correctly', async () => {
-    const schema = buildSchema(`
-      type Test {
-        answer: Int
-      }
-      type Query {
-        testQuery: Test
-      }
-    `)
-    const fields = schema.getQueryType()!.getFields()
-    fields.testQuery.resolve = () => ({ answer: 10 })
-    const requester = new GraphQLAutoRequester(schema)
-    jest.spyOn(requester, 'execute')
-    const newQuery: any = requester.query
-
-    expect(newQuery).toBeDefined()
-    expect(newQuery).toHaveProperty('testQuery')
-
-    await expect((await newQuery.testQuery).answer).resolves.toBe(10)
-
-    expect(requester.execute).toHaveBeenCalledTimes(2)
-  })
-
-  it('resolves a scalar field on a nullable union correctly', async () => {
-    const schema = buildSchema(`
-      type Test1 {
-        answer1: Int
-      }
-      type Test2 {
-        answer2: Int
-      }
-      union Test = Test1 | Test2
-      type Query {
-        testQuery: Test
-      }
-    `)
-    const fields = schema.getQueryType()!.getFields()
-    fields.testQuery.resolve = () => ({
-      __typename: 'Test2',
-      answer2: 10,
-    })
-    const requester = new GraphQLAutoRequester(schema)
-    jest.spyOn(requester, 'execute')
-    const newQuery: any = requester.query
-
-    expect(newQuery).toBeDefined()
-    expect(newQuery).toHaveProperty('testQuery')
-
-    await expect((await newQuery.testQuery).answer2).resolves.toBe(10)
-
-    expect(requester.execute).toHaveBeenCalledTimes(2)
-  })
-
-  it('resolves a scalar field on a union correctly', async () => {
-    const schema = buildSchema(`
-      type Test1 {
-        answer1: Int
-      }
-      type Test2 {
-        answer2: Int
-      }
-      union Test = Test1 | Test2
-      type Query {
-        testQuery: Test!
-      }
-    `)
-    const fields = schema.getQueryType()!.getFields()
-    fields.testQuery.resolve = () => ({
-      __typename: 'Test2',
-      answer2: 10,
-    })
-    const requester = new GraphQLAutoRequester(schema)
-    jest.spyOn(requester, 'execute')
-    const newQuery: any = requester.query
-
-    expect(newQuery).toBeDefined()
-    expect(newQuery).toHaveProperty('testQuery')
-
-    await expect((await newQuery.testQuery).answer2).resolves.toBe(10)
-
-    expect(requester.execute).toHaveBeenCalledTimes(2)
-  })
-
-  it('resolves a scalar field on a nullable interface correctly', async () => {
-    const schema = buildSchema(`
-      interface Test {
-        answer: Int
-      }
-      type Test1 implements Test {
-        answer: Int
-      }
-      type Test2 implements Test {
-        answer: Int
-        test2OnlyField: Int
-      }
-      type Query {
-        testQuery: Test
-      }
-    `)
-    const fields = schema.getQueryType()!.getFields()
-    fields.testQuery.resolve = () => ({
-      __typename: 'Test2',
-      answer: 10,
-      test2OnlyField: 10,
-    })
-    const requester = new GraphQLAutoRequester(schema)
-    jest.spyOn(requester, 'execute')
-    const newQuery: any = requester.query
-
-    expect(newQuery).toBeDefined()
-    expect(newQuery).toHaveProperty('testQuery')
-
-    const testQuery = await newQuery.testQuery
-    expect(testQuery.__typename).toBe('Test2')
-    await Promise.all([
-      expect(testQuery.answer).resolves.toBe(10),
-      expect(testQuery.test2OnlyField).resolves.toBe(10),
-    ])
-
-    expect(requester.execute).toHaveBeenCalledTimes(2)
-  })
-
-  it('resolves a scalar field on an interface correctly', async () => {
-    const schema = buildSchema(`
-      interface Test {
-        answer: Int
-      }
-      type Test1 implements Test {
-        answer: Int
-      }
-      type Test2 implements Test {
-        answer: Int
-        test2OnlyField: Int
-      }
-      type Query {
-        testQuery: Test!
-      }
-    `)
-    const fields = schema.getQueryType()!.getFields()
-    fields.testQuery.resolve = () => ({
-      __typename: 'Test2',
-      answer: 10,
-      test2OnlyField: 10,
-    })
-    const requester = new GraphQLAutoRequester(schema)
-    jest.spyOn(requester, 'execute')
-    const newQuery: any = requester.query
-
-    expect(newQuery).toBeDefined()
-    expect(newQuery).toHaveProperty('testQuery')
-
-    const testQuery = await newQuery.testQuery
-    expect(testQuery.__typename).toBe('Test2')
-    await Promise.all([
-      expect(testQuery.answer).resolves.toBe(10),
-      expect(testQuery.test2OnlyField).resolves.toBe(10),
-    ])
-
-    expect(requester.execute).toHaveBeenCalledTimes(2)
-  })
-
-  it('resolves a scalar field on a nullable list of nulls correctly', async () => {
-    const schema = buildSchema(`
-      type Test {
-        answer: Int
-      }
-      type Query {
-        testQuery: [Test]
-      }
-    `)
-    const fields = schema.getQueryType()!.getFields()
-    fields.testQuery.resolve = () => (
-      Array.from({ length: 10 }, (_, i) => (i % 2) === 0 ? null : {
-        answer: 10 * i,
+        expect(execute).toHaveBeenCalledTimes(1)
+        expect(execute).toHaveBeenCalledWith({
+          document,
+          schema,
+        })
       })
-    )
-    const requester = new GraphQLAutoRequester(schema)
-    jest.spyOn(requester, 'execute')
-    const newQuery: any = requester.query
+    })
 
-    expect(newQuery).toBeDefined()
-    expect(newQuery).toHaveProperty('testQuery')
-
-    const list = (await newQuery.testQuery)
-    expect(list).toHaveLength(10)
-    for (let i = 0; i < list.length; i++) {
-      const elem = list[i]
-      if (elem) {
-        await expect(elem.answer).resolves.toBe(10 * i)
-      }
-    }
-    expect(list.filter((x: any) => x)).toHaveLength(5)
-
-    // TODO: This should only need 2 requests, with a data caching solution
-    expect(requester.execute).toHaveBeenCalledTimes(6)
-  })
-
-  it('resolves a scalar field on a nullable list of nullable unions correctly', async () => {
-    const schema = buildSchema(`
-      type Test1 {
-        answer1: Int
-      }
-      type Test2 {
-        answer2: Int
-      }
-      union Test = Test1 | Test2
-      type Query {
-        testQuery: [Test]
-      }
-    `)
-    const fields = schema.getQueryType()!.getFields()
-    fields.testQuery.resolve = () => (
-      Array.from({ length: 10 }, (_, i) => (i % 2) === 0 ? null : {
-        __typename: (i % 4) === 2 ? 'Test2' : 'Test1',
-        answer1: 10 * i,
-        answer2: 5 * i,
+    describe('createNextRequest', () => {
+      beforeEach(() => {
+        jest.spyOn(requester, 'execute')
       })
-    )
-    const requester = new GraphQLAutoRequester(schema)
-    jest.spyOn(requester, 'execute')
-    const newQuery: any = requester.query
 
-    expect(newQuery).toBeDefined()
-    expect(newQuery).toHaveProperty('testQuery')
+      afterEach(() => {
+        ;(requester.execute as jest.Mock).mockReset()
+      })
 
-    const list = (await newQuery.testQuery)
-    expect(list).toHaveLength(10)
-    expect(list.filter((x: any) => x)).toHaveLength(5)
-    for (let i = 0; i < list.length; i++) {
-      const elem = list[i]
-      if (elem) {
-        if (await elem.__typename === 'Test1') {
-          await expect(elem.answer1).resolves.toBe(10 * i)
-        } else {
-          await expect(elem.answer2).resolves.toBe(5 * i)
-        }
-      }
-    }
+      it('creates the next request', async () => {
+        requester._nextRequest = null
+        requester._nextRequestPromise = null
+        requester.createNextRequest()
+        expect(requester._nextRequest).not.toBeNull()
+        expect(requester._nextRequestPromise).toBeInstanceOf(Promise)
 
-    // TODO: This should only need 3 requests, with a data caching solution
-    expect(requester.execute).toHaveBeenCalledTimes(6)
-  })
-
-  it('resolves fields in parallel', async () => {
-    const schema = buildSchema(`
-      type Test {
-        test: Test!
-        answer: Int
-      }
-      type Query {
-        testQuery: Int
-        testError: Int
-        getTest: Test!
-        maybeGetTest: Test
-      }
-    `)
-    const fields = schema.getQueryType()!.getFields()
-    fields.testQuery.resolve = () => 10
-    fields.testError.resolve = () => {
-      throw new Error('test error')
-    }
-    fields.getTest.resolve = () => {
-      const test: any = {
-        answer: 10,
-      }
-      test.test = test
-      return test
-    }
-    fields.maybeGetTest.resolve = fields.getTest.resolve
-    const requester = new GraphQLAutoRequester(schema)
-    jest.spyOn(requester, 'execute')
-    const newQuery: any = requester.query
-
-    expect(newQuery).toBeDefined()
-
-    await Promise.all([
-      expect(newQuery.testQuery).resolves.toBe(10),
-      expect(newQuery.testError).rejects.toThrow('test error'),
-      expect(newQuery.getTest.test.test.test.answer).resolves.toBe(10),
-      newQuery.maybeGetTest.then((r: any) => expect(r.test.test.test.answer).resolves.toBe(10)),
-    ])
-
-    expect(requester.execute).toHaveBeenCalledTimes(2)
-  })
-
-  it('supports arguments to resolve a scalar', async () => {
-    const schema = buildSchema(`
-      type Query {
-        getResult(input: Int!): Int
-      }
-    `)
-    const fields = schema.getQueryType()!.getFields()
-    fields.getResult.resolve = (_, { input }) => input * 2
-
-    const requester = new GraphQLAutoRequester(schema)
-    jest.spyOn(requester, 'execute')
-    const newQuery: any = requester.query
-    expect(newQuery).toBeDefined()
-
-    await Promise.all([
-      expect(newQuery.getResult({ input: 5 })).resolves.toBe(10),
-      expect(newQuery.getResult({ input: 4 })).resolves.toBe(8),
-      expect(() => newQuery.getResult()).toThrow('Invalid value undefined: Expected non-nullable type Int! not to be null'),
-    ])
-
-    expect(requester.execute).toHaveBeenCalledTimes(1)
-  })
-
-  it('supports argument result caching', async () => {
-    const schema = buildSchema(`
-      type Query {
-        getResult(input: Int!): Int
-      }
-    `)
-    const fields = schema.getQueryType()!.getFields()
-    fields.getResult.resolve = (_, { input }) => input * 2
-
-    const requester = new GraphQLAutoRequester(schema)
-    jest.spyOn(requester, 'execute')
-    const newQuery: any = requester.query
-    expect(newQuery).toBeDefined()
-
-    await expect(newQuery.getResult({ input: 5 })).resolves.toBe(10)
-    await expect(newQuery.getResult({ input: 5 })).resolves.toBe(10)
-
-    expect(requester.execute).toHaveBeenCalledTimes(1)
-  })
-
-  it('supports optional arguments', async () => {
-    const schema = buildSchema(`
-      type Query {
-        getResult(input: Int): Int
-      }
-    `)
-    const fields = schema.getQueryType()!.getFields()
-    fields.getResult.resolve = (_, { input }) => (input || 4) * 2
-
-    const requester = new GraphQLAutoRequester(schema)
-    jest.spyOn(requester, 'execute')
-    const newQuery: any = requester.query
-    expect(newQuery).toBeDefined()
-
-    await Promise.all([
-      expect(newQuery.getResult({ input: 5 })).resolves.toBe(10),
-      expect(newQuery.getResult({ input: 4 })).resolves.toBe(8),
-      expect(newQuery.getResult()).resolves.toBe(8),
-    ])
-
-    expect(requester.execute).toHaveBeenCalledTimes(1)
-  })
-
-  it('supports doing some deep queries automatically', async () => {
-    const schema = buildSchema(`
-      type X {
-        value: Int!
-        add(input: Int! = 1): X!
-        mult(input: Int!): X!
-        sub(input: Int!): X!
-      }
-      type Query {
-        getResult(input: Int!): X!
-      }
-    `)
-    const fields = schema.getQueryType()!.getFields()
-    fields.getResult.resolve = (_, { input }) => ({ value: input })
-    const xType = schema.getType('X')! as GraphQLObjectType
-    xType.getFields().add.resolve = ({ value }, { input }) => ({ value: value + input })
-    xType.getFields().mult.resolve = ({ value }, { input }) => ({ value: value * input })
-    xType.getFields().sub.resolve = ({ value }, { input }) => ({ value: value - input })
-
-    const requester = new GraphQLAutoRequester(schema)
-    jest.spyOn(requester, 'execute')
-    const newQuery: any = requester.query
-    expect(newQuery).toBeDefined()
-
-    await Promise.all([
-      expect(newQuery.getResult({ input: 5 }).value).resolves.toBe(5),
-      expect(newQuery.getResult({ input: 4 }).value).resolves.toBe(4),
-      expect(
-        newQuery
-          .getResult({ input: 4 })
-          .add({ input: 10 })
-          .value
-      ).resolves.toBe(14),
-      expect(
-        newQuery
-          .getResult({ input: 4 })
-          .mult({ input: 9 })
-          .sub({ input: 3 })
-          .value
-      ).resolves.toBe(33),
-      expect(
-        newQuery
-          .getResult({ input: 4 })
-          .add()
-          .value
-      ).resolves.toBe(5),
-    ])
-
-    // This should be covered by the default value case above, not requesting another time
-    await expect(
-      newQuery
-        .getResult({ input: 4 })
-        .add({ input: 1 })
-        .value
-    ).resolves.toBe(5)
-
-    expect(requester.execute).toHaveBeenCalledTimes(1)
-  })
-
-  it('supports complex input types', async () => {
-    const schema = buildSchema(`
-      input Test {
-        unrequiredValue: Int
-        valueInt: Int!
-        valueFloat: Float!
-        valueBoolean: Boolean!
-        valueString: String!
-        optionalObject: Test
-      }
-
-      type Query {
-        getResult(input: Test!): Boolean
-      }
-    `)
-    const fields = schema.getQueryType()!.getFields()
-    fields.getResult.resolve = jest.fn(() => true)
-
-    const requester = new GraphQLAutoRequester(schema)
-    jest.spyOn(requester, 'execute')
-    const newQuery: any = requester.query
-    expect(newQuery).toBeDefined()
-
-    await expect(newQuery.getResult({
-      input: {
-        valueInt: 5,
-        valueFloat: 5.0,
-        valueBoolean: true,
-        valueString: 'This is a string',
-        optionalObject: {
-          valueInt: 6,
-          valueFloat: 6.1,
-          valueBoolean: false,
-          valueString: 'This is also a string',
-        },
-      },
-    })).resolves.toBe(true)
-
-    expect(fields.getResult.resolve).toBeCalledWith(
-      undefined,
-      {
-        input: {
-          valueInt: 5,
-          valueFloat: 5.0,
-          valueBoolean: true,
-          valueString: 'This is a string',
-          optionalObject: {
-            valueInt: 6,
-            valueFloat: 6.1,
-            valueBoolean: false,
-            valueString: 'This is also a string',
-          },
-        },
-      },
-      undefined,
-      expect.anything(),
-    )
-
-    expect(requester.execute).toHaveBeenCalledTimes(1)
-  })
-
-  describe('The Collatz conjecture example', () => {
-    const expectedFirstRequest = `\
-{
-  getNumber_e6e96e2a313bcfc471e29e861bb52eec08b269b5: getNumber(input: 1) {
-    value
-  }
-  getNumber_7573e530abc31249331561cc8398fe9a777914a6: getNumber(input: 2) {
-    value
-  }
-  getNumber_c6878f25e074084c15daf696b7c3e9163d0ca854: getNumber(input: 4) {
-    value
-  }
-  getNumber_f57d96d77ca317fdffbaea09ecc1b37d140e2e5e: getNumber(input: 100) {
-    value
-  }
-  getNumber_354d91734f6d7607a3038b4b29141236d20afc33: getNumber(input: 3711) {
-    value
-  }
-}
-`
-    let requester: GraphQLAutoRequester
-    let query: any
-    beforeEach(() => {
-      const schema = buildSchema(`
-        type Num {
-          value: Int!
-          add(input: Int! = 1): Num!
-          div(input: Int!): Num!
-          mult(input: Int!): Num!
-          sub(input: Int!): Num!
-        }
-
-        type Query {
-          getNumber(input: Int!): Num!
-        }
-      `)
-      const fields = schema.getQueryType()!.getFields()
-      fields.getNumber.resolve = (_, { input }) => ({ value: input })
-      const numberType = schema.getType('Num')! as GraphQLObjectType
-      numberType.getFields().add.resolve = ({ value }, { input }) => ({ value: value + input })
-      numberType.getFields().div.resolve = ({ value }, { input }) => ({ value: Math.floor(value / input) })
-      numberType.getFields().mult.resolve = ({ value }, { input }) => ({ value: value * input })
-      numberType.getFields().sub.resolve = ({ value }, { input }) => ({ value: value - input })
-
-      requester = new GraphQLAutoRequester(schema)
-      jest.spyOn(requester, 'execute')
-      query = requester.query!
+        const result = Symbol('result')
+        ;(requester.execute as jest.Mock).mockResolvedValue(result)
+        await expect(requester._nextRequestPromise).resolves.toBe(result)
+      })
     })
 
-    it('works for the recursive example', async () => {
-      const collatzRecursive = async (number: any): Promise<number> => {
-        const value = await number.value
-        if (value === 1) {
-          return 0
-        }
-        if (value % 2 === 0) {
-          return 1 + await collatzRecursive(number.div({ input: 2 }))
-        } else {
-          return 1 + await collatzRecursive(number.mult({ input: 3 }).add({ input: 1 }))
-        }
-      }
+    describe('handleQuerySelectionSet', () => {
+      beforeEach(() => {
+        jest.spyOn(requester, 'createNextRequest')
+      })
 
-      await Promise.all([
-        expect(collatzRecursive(query.getNumber({ input: 1 }))).resolves.toBe(0),
-        expect(collatzRecursive(query.getNumber({ input: 2 }))).resolves.toBe(1),
-        expect(collatzRecursive(query.getNumber({ input: 4 }))).resolves.toBe(2),
-        expect(collatzRecursive(query.getNumber({ input: 100 }))).resolves.toBe(25),
-        expect(collatzRecursive(query.getNumber({ input: 3711 }))).resolves.toBe(237),
-      ])
+      afterEach(() => {
+        ;(requester.createNextRequest as jest.Mock).mockReset()
+      })
 
-      expect(requester.execute).toHaveBeenCalledTimes(238)
-      expect(print((requester.execute as any).mock.calls[0][0])).toBe(expectedFirstRequest)
-    })
-
-    it('works for the loop example', async () => {
-      const collatzLoop = async (number: any): Promise<number> => {
-        let steps
-        for (steps = 0; await number.value !== 1; steps++) {
-          if (await number.value % 2 === 0) {
-            number = number.div({ input: 2 })
-          } else {
-            number = number.mult({ input: 3 }).add({ input: 1 })
+      it('creates the next request if required', async () => {
+        const result = Symbol('result')
+        ;(requester.createNextRequest as jest.Mock).mockImplementationOnce(() => {
+          requester._nextRequestPromise = result as any
+          requester._nextRequest = {
+            kind: Kind.DOCUMENT,
+            definitions: [
+              {
+                kind: Kind.OPERATION_DEFINITION,
+                operation: 'query',
+                selectionSet: {
+                  kind: Kind.SELECTION_SET,
+                  selections: [],
+                },
+              },
+            ],
           }
+        })
+
+        const selection = Symbol('selection')
+        expect(requester.handleQuerySelectionSet({
+          kind: Kind.SELECTION_SET,
+          selections: [
+            selection as any as SelectionNode,
+          ],
+        })).toBe(result)
+        expect((requester._nextRequest!.definitions[0] as OperationDefinitionNode).selectionSet.selections).toEqual([
+          selection,
+        ])
+      })
+
+      it('attaches to the next request if available', async () => {
+        const result = Symbol('result')
+        requester._nextRequestPromise = result as any
+        requester._nextRequest = {
+          kind: Kind.DOCUMENT,
+          definitions: [
+            {
+              kind: Kind.OPERATION_DEFINITION,
+              operation: 'query',
+              selectionSet: {
+                kind: Kind.SELECTION_SET,
+                selections: [],
+              },
+            },
+          ],
         }
-        return steps
-      }
 
-      await Promise.all([
-        expect(collatzLoop(query.getNumber({ input: 1 }))).resolves.toBe(0),
-        expect(collatzLoop(query.getNumber({ input: 2 }))).resolves.toBe(1),
-        expect(collatzLoop(query.getNumber({ input: 4 }))).resolves.toBe(2),
-        expect(collatzLoop(query.getNumber({ input: 100 }))).resolves.toBe(25),
-        expect(collatzLoop(query.getNumber({ input: 3711 }))).resolves.toBe(237),
-      ])
-
-      expect(requester.execute).toHaveBeenCalledTimes(238)
-      expect(print((requester.execute as any).mock.calls[0][0])).toBe(expectedFirstRequest)
+        const selection = Symbol('selection')
+        expect(requester.handleQuerySelectionSet({
+          kind: Kind.SELECTION_SET,
+          selections: [
+            selection as any as SelectionNode,
+          ],
+        })).toBe(result)
+        expect((requester._nextRequest!.definitions[0] as OperationDefinitionNode).selectionSet.selections).toEqual([
+          selection,
+        ])
+      })
     })
   })
 })
