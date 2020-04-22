@@ -207,6 +207,30 @@ describe('GraphQLAutoRequester', () => {
     expect(requester.execute).toHaveBeenCalledTimes(2)
   })
 
+  it('resolves a nulled object correctly', async () => {
+    const schema = buildSchema(`
+      type Test {
+        answer: Int
+      }
+      type Query {
+        testQuery: Test
+      }
+    `)
+    const fields = schema.getQueryType()!.getFields()
+    fields.testQuery.resolve = () => null
+    const requester = new GraphQLAutoRequester(schema)
+    jest.spyOn(requester, 'execute')
+    const newQuery: any = requester.query
+
+    expect(newQuery).toBeDefined()
+    expect(newQuery).toHaveProperty('testQuery')
+
+    const testQuery = await newQuery.testQuery
+    expect(testQuery).toBe(null)
+
+    expect(requester.execute).toHaveBeenCalledTimes(1)
+  })
+
   it('resolves a scalar field on a nullable interface correctly', async () => {
     const schema = buildSchema(`
       interface Test {

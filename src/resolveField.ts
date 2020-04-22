@@ -20,5 +20,5 @@ export const resolveField = async (instance: AutoGraphQLObjectType, propertyName
     }],
   })
 
-  return result[propertyName]
+  return result && result[propertyName]
 }
