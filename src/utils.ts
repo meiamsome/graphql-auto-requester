@@ -1,3 +1,5 @@
+import deepmerge from 'deepmerge'
+
 // Gets the union type of all keys of T
 type ValueOf<T> = T[keyof T]
 
@@ -22,3 +24,23 @@ export const lazyProperty = <
     },
   })
 }
+
+export const dataMerge = (destination: any, source: any) =>
+  deepmerge(destination, source, {
+    arrayMerge,
+    clone: false,
+  })
+
+export const arrayMerge = (destination: any[], source: any[], options?: deepmerge.Options) =>
+  Array.from({ length: Math.max(destination.length, source.length) }, (_, i) => {
+    if (destination[i] === undefined) {
+      return source[i]
+    }
+    if (source[i] === undefined) {
+      return destination[i]
+    }
+    if (!destination[i] || !source[i]) {
+      return destination[i] || source[i]
+    }
+    return deepmerge(destination[i], source[i], options)
+  })

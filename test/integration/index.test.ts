@@ -341,8 +341,7 @@ describe('GraphQLAutoRequester', () => {
     }
     expect(list.filter((x: any) => x)).toHaveLength(5)
 
-    // TODO: This should only need 2 requests, with a data caching solution
-    expect(requester.execute).toHaveBeenCalledTimes(6)
+    expect(requester.execute).toHaveBeenCalledTimes(2)
   })
 
   it('resolves a scalar field on a nullable list of nullable unions correctly', async () => {
@@ -387,8 +386,7 @@ describe('GraphQLAutoRequester', () => {
       }
     }
 
-    // TODO: This should only need 3 requests, with a data caching solution
-    expect(requester.execute).toHaveBeenCalledTimes(6)
+    expect(requester.execute).toHaveBeenCalledTimes(2)
   })
 
   it('resolves fields in parallel', async () => {

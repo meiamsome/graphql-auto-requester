@@ -24,6 +24,10 @@ numberType.getFields().div.resolve = ({ value }, { input }) => ({ value: Math.fl
 numberType.getFields().mult.resolve = ({ value }, { input }) => ({ value: value * input })
 numberType.getFields().sub.resolve = ({ value }, { input }) => ({ value: value - input })
 
+// TODO: Performance is not great when querying extremely deep in the tree
+// See issue #6
+jest.setTimeout(10000)
+
 describe('The Collatz conjecture example', () => {
   const expectedFirstRequest = `\
 {

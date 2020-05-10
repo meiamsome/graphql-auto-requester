@@ -1,14 +1,23 @@
-import { GraphQLSchema, execute, DocumentNode, Kind, SelectionSetNode, OperationDefinitionNode, SelectionNode } from 'graphql'
-
+import { GraphQLSchema, execute, DocumentNode, Kind, SelectionSetNode, OperationDefinitionNode } from 'graphql'
 // @ts-ignore There are no typings for this module
-import { createResultProxy } from 'graphql-result-proxy'
+import { createResultProxy, getDataWithErrorsInline } from 'graphql-result-proxy'
 
 import AutoGraphQLObjectType from './ObjectType'
+import {
+  mergeSelectionSetInToSelectionSet,
+  leftOuterJoinSelectionSets,
+} from './selectionSet'
+import {
+  dataMerge,
+} from './utils'
 
 export { default as AutoGraphQLObjectType } from './ObjectType'
 
 export class GraphQLAutoRequester {
   schema: GraphQLSchema
+  _fetchedData: any
+  _fetchedResultProxy: any
+  _fetchedSelectionSet: SelectionSetNode
   _nextRequest?: DocumentNode
   _nextRequestPromise?: Promise<any>
 
@@ -16,6 +25,12 @@ export class GraphQLAutoRequester {
 
   constructor (schema: GraphQLSchema) {
     this.schema = schema
+
+    this._fetchedData = {}
+    this._fetchedSelectionSet = {
+      kind: Kind.SELECTION_SET,
+      selections: [],
+    }
 
     const queryType = this.schema.getQueryType()
     if (queryType) {
@@ -29,7 +44,13 @@ export class GraphQLAutoRequester {
       schema: this.schema,
     })
 
-    return createResultProxy(result)
+    mergeSelectionSetInToSelectionSet(this._fetchedSelectionSet, (document.definitions[0] as OperationDefinitionNode).selectionSet)
+
+    const data = getDataWithErrorsInline(createResultProxy(result))
+    this._fetchedData = dataMerge(this._fetchedData, data)
+    this._fetchedResultProxy = createResultProxy({ data: this._fetchedData })
+
+    return this._fetchedResultProxy
   }
 
   createNextRequest () {
@@ -58,13 +79,18 @@ export class GraphQLAutoRequester {
   }
 
   handleQuerySelectionSet (selectionSet: SelectionSetNode) {
+    const requiredToFetch = leftOuterJoinSelectionSets(selectionSet, this._fetchedSelectionSet)
+
+    if (requiredToFetch.selections.length === 0) {
+      return this._fetchedResultProxy
+    }
+
     if (!this._nextRequest) {
       this.createNextRequest()
     }
 
     const nextRequestCurrentSelectionSet = (this._nextRequest!.definitions[0] as OperationDefinitionNode).selectionSet
-    const selections: SelectionNode[] = nextRequestCurrentSelectionSet.selections as SelectionNode[]
-    selections.push(...selectionSet.selections)
+    mergeSelectionSetInToSelectionSet(nextRequestCurrentSelectionSet, selectionSet)
 
     return this._nextRequestPromise!
   }
