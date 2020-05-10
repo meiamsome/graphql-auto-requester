@@ -4,6 +4,7 @@
   "description": "An automatic graphql request builder based on used fields",
   "main": "lib/index.js",
   "dependencies": {
+    "deepmerge": "^4.2.2",
     "graphql-result-proxy": "^0.1.2",
     "json-hash": "^1.2.0"
   },
