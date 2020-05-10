@@ -1,8 +1,9 @@
 import { GraphQLScalarType, GraphQLField, GraphQLArgument, GraphQLNonNull, GraphQLEnumType, GraphQLObjectType, GraphQLInterfaceType, GraphQLUnionType, ArgumentNode, GraphQLList, SelectionSetNode, GraphQLOutputType } from 'graphql'
 
 import AutoGraphQLObjectType, { graphQLAutoRequesterMeta } from '../ObjectType'
-import { lazyProperty } from '../utils'
+import { getRelatedFragments } from '../fragmentTypemap'
 import { resolveField } from '../resolveField'
+import { lazyProperty } from '../utils'
 import { configureAbstractProperty } from './configureAbstractProperty'
 import { configureListProperty } from './configureListProperty'
 
@@ -10,6 +11,7 @@ import { configureProperty } from './configureProperty'
 import GraphQLAutoRequester from '..'
 
 jest.mock('../utils')
+jest.mock('../fragmentTypemap')
 jest.mock('../resolveField')
 jest.mock('./configureAbstractProperty')
 jest.mock('./configureListProperty')
@@ -33,6 +35,10 @@ describe('configureProperty', () => {
     ;(lazyProperty as any).mockClear()
     ;(configureAbstractProperty as any).mockClear()
     ;(configureListProperty as any).mockClear()
+    ;(getRelatedFragments as any).mockClear()
+    ;(getRelatedFragments as any).mockReturnValue({
+      selections: [],
+    })
   })
 
   const args: GraphQLArgument[] = []
@@ -230,7 +236,7 @@ describe('configureProperty', () => {
       }
       configureProperty(instance, propertyName, fieldName, field, inputArgs)
       expect(configureAbstractProperty).toHaveBeenCalledTimes(1)
-      expect(configureAbstractProperty).toHaveBeenCalledWith(instance, propertyName, fieldName, inputArgs)
+      expect(configureAbstractProperty).toHaveBeenCalledWith(instance, propertyName, fieldName, type, inputArgs)
     })
   })
 
@@ -250,7 +256,7 @@ describe('configureProperty', () => {
       }
       configureProperty(instance, propertyName, fieldName, field, inputArgs)
       expect(configureAbstractProperty).toHaveBeenCalledTimes(1)
-      expect(configureAbstractProperty).toHaveBeenCalledWith(instance, propertyName, fieldName, inputArgs)
+      expect(configureAbstractProperty).toHaveBeenCalledWith(instance, propertyName, fieldName, type, inputArgs)
     })
   })
 

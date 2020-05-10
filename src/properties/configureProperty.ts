@@ -23,7 +23,7 @@ export const configureProperty = (instance: AutoGraphQLObjectType, propertyName:
     baseType = type.ofType
   }
   if (isAbstractType(baseType)) {
-    configureAbstractProperty(instance, propertyName, fieldName, args)
+    configureAbstractProperty(instance, propertyName, fieldName, baseType, args)
   } else if (isLeafType(baseType)) {
     lazyProperty(instance, propertyName, () => resolveField(instance, propertyName, fieldName, undefined, args))
   } else if (isListType(baseType)) {

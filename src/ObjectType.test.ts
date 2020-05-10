@@ -1,10 +1,12 @@
 import { GraphQLObjectType, GraphQLScalarType, GraphQLInputObjectType, Kind } from 'graphql'
 import GraphQLAutoRequester from '.'
 import { configureProperty } from './properties/configureProperty'
+import { getRelatedFragments } from './fragmentTypemap'
 
-import AutoGraphQLObjectType from './ObjectType'
+import AutoGraphQLObjectType, { graphQLAutoRequesterMeta } from './ObjectType'
 
 jest.mock('./properties/configureProperty')
+jest.mock('./fragmentTypemap')
 
 const scalarType = new GraphQLScalarType({
   name: 'TestScalar',
@@ -16,6 +18,7 @@ describe('AutoGraphQLObjectType', () => {
   beforeEach(() => {
     parent = {} as GraphQLAutoRequester
     ;(configureProperty as jest.Mock).mockClear()
+    ;(getRelatedFragments as jest.Mock).mockReset()
   })
 
   it('configures properties with no arguments', () => {
@@ -145,5 +148,93 @@ describe('AutoGraphQLObjectType', () => {
     ;(configureProperty as jest.Mock).mockClear()
     result.testField()
     expect(configureProperty).not.toHaveBeenCalled()
+  })
+
+  it('handles preloaded fragments correctly', async () => {
+    const execute = jest.fn()
+    const type = new GraphQLObjectType({
+      name: 'TestObject',
+      fields: {
+        testField: {
+          type: scalarType,
+        },
+        testField2: {
+          type: scalarType,
+        },
+      },
+    })
+
+    ;(getRelatedFragments as jest.Mock)
+      .mockReturnValue({
+        kind: Kind.SELECTION_SET,
+        selections: [{
+          kind: Kind.FIELD,
+          name: {
+            kind: Kind.NAME,
+            value: 'testField',
+          },
+        }],
+      })
+
+    const result = new AutoGraphQLObjectType(parent, execute, type)
+    expect(configureProperty).toHaveBeenCalledTimes(2)
+
+    expect(execute).not.toHaveBeenCalled()
+
+    // First request requests the preload fragment
+    result[graphQLAutoRequesterMeta].execute({
+      kind: Kind.SELECTION_SET,
+      selections: [{
+        kind: Kind.FIELD,
+        name: {
+          kind: Kind.NAME,
+          value: '__typename',
+        },
+      }],
+    })
+
+    expect(execute).toHaveBeenCalledTimes(1)
+    expect(execute).toHaveBeenCalledWith({
+      kind: Kind.SELECTION_SET,
+      selections: [{
+        kind: Kind.FIELD,
+        name: {
+          kind: Kind.NAME,
+          value: '__typename',
+        },
+      }, {
+        kind: Kind.FIELD,
+        name: {
+          kind: Kind.NAME,
+          value: 'testField',
+        },
+      }],
+    })
+
+    execute.mockClear()
+
+    // Second request does not re-request the preload fragment.
+    result[graphQLAutoRequesterMeta].execute({
+      kind: Kind.SELECTION_SET,
+      selections: [{
+        kind: Kind.FIELD,
+        name: {
+          kind: Kind.NAME,
+          value: 'testField2',
+        },
+      }],
+    })
+
+    expect(execute).toHaveBeenCalledTimes(1)
+    expect(execute).toHaveBeenCalledWith({
+      kind: Kind.SELECTION_SET,
+      selections: [{
+        kind: Kind.FIELD,
+        name: {
+          kind: Kind.NAME,
+          value: 'testField2',
+        },
+      }],
+    })
   })
 })
