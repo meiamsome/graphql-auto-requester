@@ -12,6 +12,8 @@ import {
 
 import GraphQLAutoRequester from '.'
 import { configureProperty } from './properties/configureProperty'
+import { mergeSelectionSetInToSelectionSet } from './selectionSet'
+import { getRelatedFragments } from './fragmentTypemap'
 
 export type GraphQLAutoRequesterMeta = {
   execute: (selectionSet: SelectionSetNode) => Promise<any>
@@ -42,6 +44,22 @@ export default class AutoGraphQLObjectType {
       execute,
       type,
       parent,
+    }
+    const fragment = getRelatedFragments(parent.schema, parent.fragmentTypemap, type.name)
+    if (fragment && fragment.selections.length) {
+      this[graphQLAutoRequesterMeta].execute = (selectionSet) => {
+        // Unwrap after the first execution
+        this[graphQLAutoRequesterMeta].execute = execute
+
+        const modifiedSelectionSet = {
+          kind: Kind.SELECTION_SET,
+          selections: [],
+        }
+
+        mergeSelectionSetInToSelectionSet(modifiedSelectionSet, selectionSet)
+        mergeSelectionSetInToSelectionSet(modifiedSelectionSet, fragment)
+        return execute(modifiedSelectionSet)
+      }
     }
     this.__typename = type.name
 

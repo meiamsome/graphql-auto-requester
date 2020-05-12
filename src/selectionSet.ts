@@ -58,7 +58,7 @@ export const areSimilarFieldLists = (left: readonly FieldStructure[], right: rea
   return true
 }
 
-export const isSimilarFieldNode = (left: FieldNode, right: FieldNode): boolean => {
+export const isSimilarFieldNode = (left: FieldNode, right: FieldNode, log = false): boolean => {
   if ((left.alias && left.alias.value) !== (right.alias && right.alias.value)) {
     return false
   }
@@ -67,14 +67,15 @@ export const isSimilarFieldNode = (left: FieldNode, right: FieldNode): boolean =
     return false
   }
 
-  if ((left.arguments && !right.arguments) || (!left.arguments && right.arguments)) {
+  const leftArgs = left.arguments || []
+  const rightArgs = right.arguments || []
+  if (leftArgs.length !== rightArgs.length) {
+    if (log) console.log('Mismatched args', left.arguments, right.arguments)
     return false
   }
 
-  if (left.arguments && right.arguments) {
-    if (!areSimilarFieldLists(left.arguments, right.arguments)) {
-      return false
-    }
+  if (!areSimilarFieldLists(leftArgs, rightArgs)) {
+    return false
   }
 
   return true

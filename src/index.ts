@@ -1,7 +1,9 @@
 import { GraphQLSchema, execute, DocumentNode, Kind, SelectionSetNode, OperationDefinitionNode } from 'graphql'
+
 // @ts-ignore There are no typings for this module
 import { createResultProxy, getDataWithErrorsInline } from 'graphql-result-proxy'
 
+import { GraphQLFragmentTypeMap, parseTypeMapFromGraphQLDocument } from './fragmentTypemap'
 import AutoGraphQLObjectType from './ObjectType'
 import {
   mergeSelectionSetInToSelectionSet,
@@ -13,8 +15,14 @@ import {
 
 export { default as AutoGraphQLObjectType } from './ObjectType'
 
+type GraphQLAutoRequesterSettings = {
+  fragments?: string | DocumentNode
+}
+
 export class GraphQLAutoRequester {
+  fragmentTypemap: GraphQLFragmentTypeMap
   schema: GraphQLSchema
+  settings: GraphQLAutoRequesterSettings
   _fetchedData: any
   _fetchedResultProxy: any
   _fetchedSelectionSet: SelectionSetNode
@@ -23,8 +31,10 @@ export class GraphQLAutoRequester {
 
   query?: AutoGraphQLObjectType
 
-  constructor (schema: GraphQLSchema) {
+  constructor (schema: GraphQLSchema, settings: GraphQLAutoRequesterSettings = {}) {
     this.schema = schema
+    this.settings = settings
+    this.fragmentTypemap = parseTypeMapFromGraphQLDocument(schema, settings.fragments)
 
     this._fetchedData = {}
     this._fetchedSelectionSet = {

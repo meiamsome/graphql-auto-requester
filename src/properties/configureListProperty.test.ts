@@ -7,21 +7,25 @@ import {
   GraphQLObjectType,
   GraphQLScalarType,
   GraphQLUnionType,
-  Kind,
   SelectionSetNode,
 } from 'graphql'
 import { graphQLAutoRequesterMeta } from '../ObjectType'
 import GraphQLAutoRequester, { AutoGraphQLObjectType } from '..'
 import { lazyProperty } from '../utils'
+import { getInitialSelections, canonicalizeRequestedFields } from '../fragmentTypemap'
 import { resolveField } from '../resolveField'
 
 import { configureListProperty } from './configureListProperty'
 
 jest.mock('../utils')
+jest.mock('../fragmentTypemap')
 jest.mock('../resolveField')
 
 const propertyName = 'testprop'
 const fieldName = 'testfield'
+
+const initialSelectionSet = Symbol('initialSelectionSet')
+const canonicalSelectionSet = Symbol('canonicalSelectionSet')
 
 describe('configureListProperty', () => {
   const inputArgs: ArgumentNode[] = (Symbol('args') as any) as ArgumentNode[]
@@ -43,6 +47,14 @@ describe('configureListProperty', () => {
     }
     ;(resolveField as any).mockClear()
     ;(lazyProperty as any).mockClear()
+    ;(getInitialSelections as jest.Mock)
+      .mockClear()
+    ;(getInitialSelections as jest.Mock)
+      .mockReturnValue(initialSelectionSet)
+    ;(canonicalizeRequestedFields as jest.Mock)
+      .mockClear()
+    ;(canonicalizeRequestedFields as jest.Mock)
+      .mockReturnValue(canonicalSelectionSet)
   })
 
   describe('For a list of scalars', () => {
@@ -149,16 +161,9 @@ describe('configureListProperty', () => {
         const result = await fn()
         expect(result).toBeInstanceOf(Array)
         expect(result).toHaveLength(2)
-        expect(resolveField).toHaveBeenCalledWith(instance, propertyName, fieldName, {
-          kind: Kind.SELECTION_SET,
-          selections: [{
-            kind: Kind.FIELD,
-            name: {
-              kind: Kind.NAME,
-              value: '__typename',
-            },
-          }],
-        }, inputArgs)
+
+        expect(getInitialSelections).toHaveBeenCalledWith(parent, underlyingType)
+        expect(resolveField).toHaveBeenCalledWith(instance, propertyName, fieldName, initialSelectionSet, inputArgs)
 
         expect(result[0]).toBeInstanceOf(AutoGraphQLObjectType)
         expect(result[1]).toBeNull()
@@ -166,20 +171,8 @@ describe('configureListProperty', () => {
         ;(resolveField as any).mockClear()
         const selectionSet: SelectionSetNode = Symbol('selectionSet') as any as SelectionSetNode
         result[0][graphQLAutoRequesterMeta].execute(selectionSet)
-        expect(resolveField).toHaveBeenCalledWith(instance, propertyName, fieldName, {
-          kind: Kind.SELECTION_SET,
-          selections: [{
-            kind: Kind.INLINE_FRAGMENT,
-            typeCondition: {
-              kind: Kind.NAMED_TYPE,
-              name: {
-                kind: Kind.NAME,
-                value: 'TestObject',
-              },
-            },
-            selectionSet,
-          }],
-        }, inputArgs)
+        expect(canonicalizeRequestedFields).toHaveBeenCalledWith(underlyingType, underlyingType, selectionSet)
+        expect(resolveField).toHaveBeenCalledWith(instance, propertyName, fieldName, canonicalSelectionSet, inputArgs)
       })
     })
 
@@ -196,16 +189,9 @@ describe('configureListProperty', () => {
         const result = await fn()
         expect(result).toBeInstanceOf(Array)
         expect(result).toHaveLength(2)
-        expect(resolveField).toHaveBeenCalledWith(instance, propertyName, fieldName, {
-          kind: Kind.SELECTION_SET,
-          selections: [{
-            kind: Kind.FIELD,
-            name: {
-              kind: Kind.NAME,
-              value: '__typename',
-            },
-          }],
-        }, inputArgs)
+
+        expect(getInitialSelections).toHaveBeenCalledWith(parent, underlyingType)
+        expect(resolveField).toHaveBeenCalledWith(instance, propertyName, fieldName, initialSelectionSet, inputArgs)
 
         for (const elem of result) {
           expect(elem).toBeInstanceOf(AutoGraphQLObjectType)
@@ -214,20 +200,9 @@ describe('configureListProperty', () => {
         ;(resolveField as any).mockClear()
         const selectionSet: SelectionSetNode = Symbol('selectionSet') as any as SelectionSetNode
         result[0][graphQLAutoRequesterMeta].execute(selectionSet)
-        expect(resolveField).toHaveBeenCalledWith(instance, propertyName, fieldName, {
-          kind: Kind.SELECTION_SET,
-          selections: [{
-            kind: Kind.INLINE_FRAGMENT,
-            typeCondition: {
-              kind: Kind.NAMED_TYPE,
-              name: {
-                kind: Kind.NAME,
-                value: 'TestObject',
-              },
-            },
-            selectionSet,
-          }],
-        }, inputArgs)
+
+        expect(canonicalizeRequestedFields).toHaveBeenCalledWith(underlyingType, underlyingType, selectionSet)
+        expect(resolveField).toHaveBeenCalledWith(instance, propertyName, fieldName, canonicalSelectionSet, inputArgs)
       })
     })
   })
@@ -268,16 +243,9 @@ describe('configureListProperty', () => {
         const result = await fn()
         expect(result).toBeInstanceOf(Array)
         expect(result).toHaveLength(3)
-        expect(resolveField).toHaveBeenCalledWith(instance, propertyName, fieldName, {
-          kind: Kind.SELECTION_SET,
-          selections: [{
-            kind: Kind.FIELD,
-            name: {
-              kind: Kind.NAME,
-              value: '__typename',
-            },
-          }],
-        }, inputArgs)
+
+        expect(getInitialSelections).toHaveBeenCalledWith(parent, underlyingType)
+        expect(resolveField).toHaveBeenCalledWith(instance, propertyName, fieldName, initialSelectionSet, inputArgs)
 
         expect(result[0]).toBeInstanceOf(AutoGraphQLObjectType)
         expect(result[1]).toBeInstanceOf(AutoGraphQLObjectType)
@@ -286,37 +254,16 @@ describe('configureListProperty', () => {
         const selectionSet: SelectionSetNode = Symbol('selectionSet') as any as SelectionSetNode
         ;(resolveField as any).mockClear()
         result[0][graphQLAutoRequesterMeta].execute(selectionSet)
-        expect(resolveField).toHaveBeenCalledWith(instance, propertyName, fieldName, {
-          kind: Kind.SELECTION_SET,
-          selections: [{
-            kind: Kind.INLINE_FRAGMENT,
-            typeCondition: {
-              kind: Kind.NAMED_TYPE,
-              name: {
-                kind: Kind.NAME,
-                value: 'TestObject1',
-              },
-            },
-            selectionSet,
-          }],
-        }, inputArgs)
 
+        expect(canonicalizeRequestedFields).toHaveBeenCalledWith(underlyingType, implementingType1, selectionSet)
+        expect(resolveField).toHaveBeenCalledWith(instance, propertyName, fieldName, canonicalSelectionSet, inputArgs)
+
+        ;(canonicalizeRequestedFields as any).mockClear()
         ;(resolveField as any).mockClear()
         result[1][graphQLAutoRequesterMeta].execute(selectionSet)
-        expect(resolveField).toHaveBeenCalledWith(instance, propertyName, fieldName, {
-          kind: Kind.SELECTION_SET,
-          selections: [{
-            kind: Kind.INLINE_FRAGMENT,
-            typeCondition: {
-              kind: Kind.NAMED_TYPE,
-              name: {
-                kind: Kind.NAME,
-                value: 'TestObject2',
-              },
-            },
-            selectionSet,
-          }],
-        }, inputArgs)
+
+        expect(canonicalizeRequestedFields).toHaveBeenCalledWith(underlyingType, implementingType2, selectionSet)
+        expect(resolveField).toHaveBeenCalledWith(instance, propertyName, fieldName, canonicalSelectionSet, inputArgs)
       })
     })
 
@@ -333,16 +280,9 @@ describe('configureListProperty', () => {
         const result = await fn()
         expect(result).toBeInstanceOf(Array)
         expect(result).toHaveLength(2)
-        expect(resolveField).toHaveBeenCalledWith(instance, propertyName, fieldName, {
-          kind: Kind.SELECTION_SET,
-          selections: [{
-            kind: Kind.FIELD,
-            name: {
-              kind: Kind.NAME,
-              value: '__typename',
-            },
-          }],
-        }, inputArgs)
+
+        expect(getInitialSelections).toHaveBeenCalledWith(parent, underlyingType)
+        expect(resolveField).toHaveBeenCalledWith(instance, propertyName, fieldName, initialSelectionSet, inputArgs)
 
         for (const elem of result) {
           expect(elem).toBeInstanceOf(AutoGraphQLObjectType)
@@ -351,37 +291,16 @@ describe('configureListProperty', () => {
         const selectionSet: SelectionSetNode = Symbol('selectionSet') as any as SelectionSetNode
         ;(resolveField as any).mockClear()
         result[0][graphQLAutoRequesterMeta].execute(selectionSet)
-        expect(resolveField).toHaveBeenCalledWith(instance, propertyName, fieldName, {
-          kind: Kind.SELECTION_SET,
-          selections: [{
-            kind: Kind.INLINE_FRAGMENT,
-            typeCondition: {
-              kind: Kind.NAMED_TYPE,
-              name: {
-                kind: Kind.NAME,
-                value: 'TestObject1',
-              },
-            },
-            selectionSet,
-          }],
-        }, inputArgs)
 
+        expect(canonicalizeRequestedFields).toHaveBeenCalledWith(underlyingType, implementingType1, selectionSet)
+        expect(resolveField).toHaveBeenCalledWith(instance, propertyName, fieldName, canonicalSelectionSet, inputArgs)
+
+        ;(canonicalizeRequestedFields as any).mockClear()
         ;(resolveField as any).mockClear()
         result[1][graphQLAutoRequesterMeta].execute(selectionSet)
-        expect(resolveField).toHaveBeenCalledWith(instance, propertyName, fieldName, {
-          kind: Kind.SELECTION_SET,
-          selections: [{
-            kind: Kind.INLINE_FRAGMENT,
-            typeCondition: {
-              kind: Kind.NAMED_TYPE,
-              name: {
-                kind: Kind.NAME,
-                value: 'TestObject2',
-              },
-            },
-            selectionSet,
-          }],
-        }, inputArgs)
+
+        expect(canonicalizeRequestedFields).toHaveBeenCalledWith(underlyingType, implementingType2, selectionSet)
+        expect(resolveField).toHaveBeenCalledWith(instance, propertyName, fieldName, canonicalSelectionSet, inputArgs)
       })
     })
   })
@@ -420,16 +339,9 @@ describe('configureListProperty', () => {
         const result = await fn()
         expect(result).toBeInstanceOf(Array)
         expect(result).toHaveLength(3)
-        expect(resolveField).toHaveBeenCalledWith(instance, propertyName, fieldName, {
-          kind: Kind.SELECTION_SET,
-          selections: [{
-            kind: Kind.FIELD,
-            name: {
-              kind: Kind.NAME,
-              value: '__typename',
-            },
-          }],
-        }, inputArgs)
+
+        expect(getInitialSelections).toHaveBeenCalledWith(parent, underlyingType)
+        expect(resolveField).toHaveBeenCalledWith(instance, propertyName, fieldName, initialSelectionSet, inputArgs)
 
         expect(result[0]).toBeInstanceOf(AutoGraphQLObjectType)
         expect(result[1]).toBeInstanceOf(AutoGraphQLObjectType)
@@ -438,37 +350,16 @@ describe('configureListProperty', () => {
         const selectionSet: SelectionSetNode = Symbol('selectionSet') as any as SelectionSetNode
         ;(resolveField as any).mockClear()
         result[0][graphQLAutoRequesterMeta].execute(selectionSet)
-        expect(resolveField).toHaveBeenCalledWith(instance, propertyName, fieldName, {
-          kind: Kind.SELECTION_SET,
-          selections: [{
-            kind: Kind.INLINE_FRAGMENT,
-            typeCondition: {
-              kind: Kind.NAMED_TYPE,
-              name: {
-                kind: Kind.NAME,
-                value: 'TestObject1',
-              },
-            },
-            selectionSet,
-          }],
-        }, inputArgs)
 
+        expect(canonicalizeRequestedFields).toHaveBeenCalledWith(underlyingType, unionedType1, selectionSet)
+        expect(resolveField).toHaveBeenCalledWith(instance, propertyName, fieldName, canonicalSelectionSet, inputArgs)
+
+        ;(canonicalizeRequestedFields as any).mockClear()
         ;(resolveField as any).mockClear()
         result[1][graphQLAutoRequesterMeta].execute(selectionSet)
-        expect(resolveField).toHaveBeenCalledWith(instance, propertyName, fieldName, {
-          kind: Kind.SELECTION_SET,
-          selections: [{
-            kind: Kind.INLINE_FRAGMENT,
-            typeCondition: {
-              kind: Kind.NAMED_TYPE,
-              name: {
-                kind: Kind.NAME,
-                value: 'TestObject2',
-              },
-            },
-            selectionSet,
-          }],
-        }, inputArgs)
+
+        expect(canonicalizeRequestedFields).toHaveBeenCalledWith(underlyingType, unionedType2, selectionSet)
+        expect(resolveField).toHaveBeenCalledWith(instance, propertyName, fieldName, canonicalSelectionSet, inputArgs)
       })
     })
 
@@ -485,16 +376,9 @@ describe('configureListProperty', () => {
         const result = await fn()
         expect(result).toBeInstanceOf(Array)
         expect(result).toHaveLength(2)
-        expect(resolveField).toHaveBeenCalledWith(instance, propertyName, fieldName, {
-          kind: Kind.SELECTION_SET,
-          selections: [{
-            kind: Kind.FIELD,
-            name: {
-              kind: Kind.NAME,
-              value: '__typename',
-            },
-          }],
-        }, inputArgs)
+
+        expect(getInitialSelections).toHaveBeenCalledWith(parent, underlyingType)
+        expect(resolveField).toHaveBeenCalledWith(instance, propertyName, fieldName, initialSelectionSet, inputArgs)
 
         for (const elem of result) {
           expect(elem).toBeInstanceOf(AutoGraphQLObjectType)
@@ -503,37 +387,16 @@ describe('configureListProperty', () => {
         const selectionSet: SelectionSetNode = Symbol('selectionSet') as any as SelectionSetNode
         ;(resolveField as any).mockClear()
         result[0][graphQLAutoRequesterMeta].execute(selectionSet)
-        expect(resolveField).toHaveBeenCalledWith(instance, propertyName, fieldName, {
-          kind: Kind.SELECTION_SET,
-          selections: [{
-            kind: Kind.INLINE_FRAGMENT,
-            typeCondition: {
-              kind: Kind.NAMED_TYPE,
-              name: {
-                kind: Kind.NAME,
-                value: 'TestObject1',
-              },
-            },
-            selectionSet,
-          }],
-        }, inputArgs)
 
+        expect(canonicalizeRequestedFields).toHaveBeenCalledWith(underlyingType, unionedType1, selectionSet)
+        expect(resolveField).toHaveBeenCalledWith(instance, propertyName, fieldName, canonicalSelectionSet, inputArgs)
+
+        ;(canonicalizeRequestedFields as any).mockClear()
         ;(resolveField as any).mockClear()
         result[1][graphQLAutoRequesterMeta].execute(selectionSet)
-        expect(resolveField).toHaveBeenCalledWith(instance, propertyName, fieldName, {
-          kind: Kind.SELECTION_SET,
-          selections: [{
-            kind: Kind.INLINE_FRAGMENT,
-            typeCondition: {
-              kind: Kind.NAMED_TYPE,
-              name: {
-                kind: Kind.NAME,
-                value: 'TestObject2',
-              },
-            },
-            selectionSet,
-          }],
-        }, inputArgs)
+
+        expect(canonicalizeRequestedFields).toHaveBeenCalledWith(underlyingType, unionedType2, selectionSet)
+        expect(resolveField).toHaveBeenCalledWith(instance, propertyName, fieldName, canonicalSelectionSet, inputArgs)
       })
     })
   })
