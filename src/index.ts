@@ -15,7 +15,7 @@ import {
 
 export { default as AutoGraphQLObjectType } from './ObjectType'
 
-type GraphQLAutoRequesterSettings = {
+export type GraphQLAutoRequesterSettings = {
   fragments?: string | DocumentNode
 }
 
