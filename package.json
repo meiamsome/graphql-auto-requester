@@ -1,6 +1,6 @@
 {
   "name": "graphql-auto-requester",
-  "version": "0.1.4",
+  "version": "0.2.0",
   "description": "An automatic graphql request builder based on used fields",
   "main": "lib/index.js",
   "dependencies": {
