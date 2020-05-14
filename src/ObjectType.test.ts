@@ -2,16 +2,20 @@ import { GraphQLObjectType, GraphQLScalarType, GraphQLInputObjectType, Kind } fr
 import GraphQLAutoRequester from '.'
 import { configureProperty } from './properties/configureProperty'
 import { getRelatedFragments } from './fragmentTypemap'
+import { getFieldAlias, getInputArgumentNodes } from './utils'
 
 import AutoGraphQLObjectType, { graphQLAutoRequesterMeta } from './ObjectType'
 
 jest.mock('./properties/configureProperty')
 jest.mock('./fragmentTypemap')
+jest.mock('./utils')
 
 const scalarType = new GraphQLScalarType({
   name: 'TestScalar',
   serialize: () => {},
 })
+
+const argumentInputs = Symbol('argumentInputs')
 
 describe('AutoGraphQLObjectType', () => {
   let parent: GraphQLAutoRequester
@@ -19,6 +23,8 @@ describe('AutoGraphQLObjectType', () => {
     parent = {} as GraphQLAutoRequester
     ;(configureProperty as jest.Mock).mockClear()
     ;(getRelatedFragments as jest.Mock).mockReset()
+    ;(getInputArgumentNodes as jest.Mock).mockReset()
+    ;(getInputArgumentNodes as jest.Mock).mockReturnValue(argumentInputs)
   })
 
   it('configures properties with no arguments', () => {
@@ -67,31 +73,24 @@ describe('AutoGraphQLObjectType', () => {
     expect(result).toHaveProperty('testField')
     expect(result.testField).toBeInstanceOf(Function)
 
+    const alias = 'exampleAlias'
+    ;(getFieldAlias as jest.Mock).mockReturnValue(alias)
     const fieldResult = Symbol('fieldResult')
-    ;(configureProperty as jest.Mock).mockImplementation((instance) => {
-      instance.testField_bf21a9e8fbc5a3846fb05b4fa0859e0917b2202f = fieldResult
+    ;(configureProperty as jest.Mock).mockImplementation((instance, fieldAlias) => {
+      instance[fieldAlias] = fieldResult
     })
     expect(result.testField()).toBe(fieldResult)
 
     expect(configureProperty).toHaveBeenCalledWith(
       result,
-      'testField_bf21a9e8fbc5a3846fb05b4fa0859e0917b2202f', // This is the hash for an empty json object
+      alias,
       'testField',
       type.getFields().testField,
-      [{
-        kind: Kind.ARGUMENT,
-        name: {
-          kind: Kind.NAME,
-          value: 'testArg',
-        },
-        value: {
-          kind: Kind.NULL,
-        },
-      }]
+      argumentInputs,
     )
 
     ;(configureProperty as jest.Mock).mockClear()
-    result.testField()
+    expect(result.testField()).toBe(fieldResult)
     expect(configureProperty).not.toHaveBeenCalled()
   })
 
@@ -121,28 +120,20 @@ describe('AutoGraphQLObjectType', () => {
     expect(result).toHaveProperty('testField')
     expect(result.testField).toBeInstanceOf(Function)
 
+    const alias = 'exampleAlias'
+    ;(getFieldAlias as jest.Mock).mockReturnValue(alias)
     const fieldResult = Symbol('fieldResult')
-    ;(configureProperty as jest.Mock).mockImplementation((instance) => {
-      instance.testField_a80b968fbe3202c81418bf79f946b51f0b40ea88 = fieldResult
+    ;(configureProperty as jest.Mock).mockImplementation((instance, fieldAlias) => {
+      instance[fieldAlias] = fieldResult
     })
     expect(result.testField()).toBe(fieldResult)
 
     expect(configureProperty).toHaveBeenCalledWith(
       result,
-      'testField_a80b968fbe3202c81418bf79f946b51f0b40ea88', // This is the hash for a json object {"testArg":{}}
+      alias,
       'testField',
       type.getFields().testField,
-      [{
-        kind: Kind.ARGUMENT,
-        name: {
-          kind: Kind.NAME,
-          value: 'testArg',
-        },
-        value: {
-          kind: Kind.OBJECT,
-          fields: [],
-        },
-      }]
+      argumentInputs,
     )
 
     ;(configureProperty as jest.Mock).mockClear()

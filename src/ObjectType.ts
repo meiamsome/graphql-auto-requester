@@ -2,18 +2,13 @@ import {
   Kind,
   SelectionSetNode,
   GraphQLObjectType,
-  ArgumentNode,
-  coerceInputValue,
-  astFromValue,
 } from 'graphql'
-import {
-  digest,
-} from 'json-hash'
 
 import GraphQLAutoRequester from '.'
 import { configureProperty } from './properties/configureProperty'
 import { mergeSelectionSetInToSelectionSet } from './selectionSet'
 import { getRelatedFragments } from './fragmentTypemap'
+import { getInputArgumentNodes, getFieldAlias } from './utils'
 
 export type GraphQLAutoRequesterMeta = {
   execute: (selectionSet: SelectionSetNode) => Promise<any>
@@ -66,22 +61,8 @@ export default class AutoGraphQLObjectType {
     for (const [fieldName, field] of Object.entries(type.getFields())) {
       if (field.args.length) {
         this[fieldName] = (args: any = {}) => {
-          const inputs: ArgumentNode[] = []
-          for (const argument of field.args) {
-            if (argument.defaultValue) {
-              args[argument.name] = args[argument.name] || argument.defaultValue
-            }
-            const value = astFromValue(coerceInputValue(args[argument.name], argument.type), argument.type)!
-            inputs.push({
-              kind: Kind.ARGUMENT,
-              name: {
-                kind: Kind.NAME,
-                value: argument.name,
-              },
-              value,
-            })
-          }
-          const key = `${fieldName}_${digest(args)}`
+          const inputs = getInputArgumentNodes(field, args)
+          const key = getFieldAlias(field, inputs)
           if (!Object.prototype.hasOwnProperty.call(this, key)) {
             configureProperty(this, key, fieldName, field, inputs)
           }

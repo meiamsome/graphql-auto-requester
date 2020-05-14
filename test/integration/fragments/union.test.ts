@@ -5,7 +5,6 @@ import GraphQLAutoRequester from '../../../src/index'
 
 describe('Object Fragments', () => {
   it('resolves a scalar field on Query correctly', async () => {
-    // global.printDocs = true
     const schema = buildSchema(`
       type X {
         test: Int
