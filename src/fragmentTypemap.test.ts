@@ -22,6 +22,7 @@ const schema = buildSchema(`
   type X implements Inter & Inter2 {
     test: Int
     interfaceField: Int
+    fieldWithAnArgument(argument: Int): Int
   }
 
   union Union = X
@@ -69,7 +70,7 @@ describe('parseTypeMapFromGraphQLDocument', () => {
           interfaceField
         }
       }
-    `)).toThrow('You cannot include a fragment spread in a preload. Found in type X.')
+    `)).toThrow('You cannot include an inline spread in a preload. Found in type X.')
   })
 
   it('prevents a fragment with an aliased field', () => {
@@ -104,6 +105,133 @@ describe('parseTypeMapFromGraphQLDocument', () => {
           }),
         })],
       },
+    })
+  })
+
+  describe('for a field with arguments', () => {
+    it('permits a fragment with arguments', () => {
+      expect(parseTypeMapFromGraphQLDocument(schema, `
+        fragment xFragment on X {
+          fieldWithAnArgument(argument: 100)
+        }
+      `)).toEqual({
+        X: {
+          kind: Kind.SELECTION_SET,
+          selections: [expect.objectContaining({
+            kind: Kind.FIELD,
+            alias: expect.objectContaining({
+              kind: Kind.NAME,
+              value: 'fieldWithAnArgument_e51c8e76f47873b9bd3540b2e6807c1b098c2e5d',
+            }),
+            arguments: [expect.objectContaining({
+              kind: Kind.ARGUMENT,
+              name: expect.objectContaining({
+                kind: Kind.NAME,
+                value: 'argument',
+              }),
+              value: expect.objectContaining({
+                kind: Kind.INT,
+                value: '100',
+              }),
+            })],
+            name: expect.objectContaining({
+              kind: Kind.NAME,
+              value: 'fieldWithAnArgument',
+            }),
+          })],
+        },
+      })
+    })
+
+    it('permits a fragment without arguments if permitted', () => {
+      expect(parseTypeMapFromGraphQLDocument(schema, `
+        fragment xFragment on X {
+          fieldWithAnArgument
+        }
+      `)).toEqual({
+        X: {
+          kind: Kind.SELECTION_SET,
+          selections: [expect.objectContaining({
+            kind: Kind.FIELD,
+            alias: expect.objectContaining({
+              kind: Kind.NAME,
+              value: 'fieldWithAnArgument_bf21a9e8fbc5a3846fb05b4fa0859e0917b2202f',
+            }),
+            arguments: [expect.objectContaining({
+              kind: Kind.ARGUMENT,
+              name: expect.objectContaining({
+                kind: Kind.NAME,
+                value: 'argument',
+              }),
+              value: expect.objectContaining({
+                kind: Kind.NULL,
+              }),
+            })],
+            name: expect.objectContaining({
+              kind: Kind.NAME,
+              value: 'fieldWithAnArgument',
+            }),
+          })],
+        },
+      })
+    })
+
+    it('permits a fragment with multiple entries for the same field', () => {
+      expect(parseTypeMapFromGraphQLDocument(schema, `
+        fragment xFragment on X {
+          fieldWithAnArgument
+          fieldWithAnArgument(argument: 100)
+        }
+      `)).toEqual({
+        X: {
+          kind: Kind.SELECTION_SET,
+          selections: [
+            expect.objectContaining({
+              kind: Kind.FIELD,
+              alias: expect.objectContaining({
+                kind: Kind.NAME,
+                value: 'fieldWithAnArgument_bf21a9e8fbc5a3846fb05b4fa0859e0917b2202f',
+              }),
+              arguments: [expect.objectContaining({
+                kind: Kind.ARGUMENT,
+                name: expect.objectContaining({
+                  kind: Kind.NAME,
+                  value: 'argument',
+                }),
+                value: expect.objectContaining({
+                  kind: Kind.NULL,
+                }),
+              })],
+              name: expect.objectContaining({
+                kind: Kind.NAME,
+                value: 'fieldWithAnArgument',
+              }),
+            }),
+            expect.objectContaining({
+              kind: Kind.FIELD,
+              alias: expect.objectContaining({
+                kind: Kind.NAME,
+                value: 'fieldWithAnArgument_e51c8e76f47873b9bd3540b2e6807c1b098c2e5d',
+              }),
+              arguments: [expect.objectContaining({
+                kind: Kind.ARGUMENT,
+                name: expect.objectContaining({
+                  kind: Kind.NAME,
+                  value: 'argument',
+                }),
+                value: expect.objectContaining({
+                  kind: Kind.INT,
+                  value: '100',
+                }),
+              })],
+              name: expect.objectContaining({
+                kind: Kind.NAME,
+                value: 'fieldWithAnArgument',
+              }),
+            }),
+          ],
+        },
+      })
     })
   })
 })
