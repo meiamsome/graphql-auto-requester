@@ -26,6 +26,10 @@ const schema = buildSchema(`
   }
 
   union Union = X
+
+  type Query {
+    field: Int
+  }
 `)
 
 describe('parseTypeMapFromGraphQLDocument', () => {
@@ -42,7 +46,7 @@ describe('parseTypeMapFromGraphQLDocument', () => {
       fragment fakeFragment on FakeType {
         field
       }
-    `)).toThrow('Unknown type FakeType appearing in preload fragments.')
+    `)).toThrow('Unknown type "FakeType".')
   })
 
   it('prevents a fragment on a scalar', () => {
@@ -50,15 +54,13 @@ describe('parseTypeMapFromGraphQLDocument', () => {
       fragment unionFragment on Scalar {
         field
       }
-    `)).toThrow('You cannot add a preload fragment to the non-composite type Scalar.')
+    `)).toThrow('Fragment "unionFragment" cannot condition on non composite type "Scalar".')
   })
 
   it('prevents a fragment on a union', () => {
     expect(() => parseTypeMapFromGraphQLDocument(schema, `
       fragment unionFragment on Union {
-        ... on Inter {
-          interfaceField
-        }
+        field
       }
     `)).toThrow('You cannot add a preload fragment to the Union type Union.')
   })
@@ -76,9 +78,9 @@ describe('parseTypeMapFromGraphQLDocument', () => {
   it('prevents a fragment with an aliased field', () => {
     expect(() => parseTypeMapFromGraphQLDocument(schema, `
       fragment xFragment on X {
-        alias: type
+        alias: test
       }
-    `)).toThrow('X.type must not have an alias.')
+    `)).toThrow('X.test must not have an alias.')
   })
 
   it('prevents a fragment with an implemented field', () => {
