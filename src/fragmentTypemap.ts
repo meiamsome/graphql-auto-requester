@@ -1,4 +1,4 @@
-import { DocumentNode, parse, Kind, SelectionSetNode, GraphQLSchema, isObjectType, isUnionType, isAbstractType, doTypesOverlap, isCompositeType, GraphQLCompositeType, GraphQLObjectType, isInterfaceType, visit, TypeInfo, FieldNode, visitWithTypeInfo, FragmentDefinitionNode, NoUnusedFragmentsRule, validate, specifiedRules, ValidationContext, GraphQLError, OverlappingFieldsCanBeMergedRule } from 'graphql'
+import { DocumentNode, parse, Kind, SelectionSetNode, GraphQLSchema, isObjectType, isUnionType, isAbstractType, doTypesOverlap, isCompositeType, GraphQLCompositeType, GraphQLObjectType, isInterfaceType, visit, TypeInfo, FieldNode, visitWithTypeInfo, FragmentDefinitionNode, NoUnusedFragmentsRule, validate, specifiedRules, ValidationContext, GraphQLError, OverlappingFieldsCanBeMergedRule, FragmentSpreadNode } from 'graphql'
 import { mergeSelectionSetInToSelectionSet, mergeFieldNodeInToSelectionSet } from './selectionSet'
 import GraphQLAutoRequester from '.'
 import { getFieldAlias, getArgumentsFromNodes, getInputArgumentNodes } from './utils'
@@ -44,10 +44,14 @@ const noInlineFragment = (context: ValidationContext) => ({
   },
 })
 
-const noFragmentSpreads = (context: ValidationContext) => ({
-  FragmentSpread () {
+const fragmentSpreadsMustAppearInSameType = (context: ValidationContext) => ({
+  FragmentSpread (node: FragmentSpreadNode) {
     const type: GraphQLCompositeType = context.getParentType()!
-    throw new Error(`You cannot include a fragment spread in a preload. Found in type ${type.name}.`)
+    const fragment = context.getFragment(node.name.value)!
+    const fragmentTypeName = fragment.typeCondition.name.value
+    if (fragmentTypeName !== type.name) {
+      throw new Error(`You cannot include a fragment spread in a different type (${fragmentTypeName} !== ${type.name})`)
+    }
   },
 })
 
@@ -73,7 +77,7 @@ export const parseTypeMapFromGraphQLDocument = (schema: GraphQLSchema, document:
     noFieldAliasesRule,
     noFieldsFromInterfaces,
     noInlineFragment,
-    noFragmentSpreads,
+    fragmentSpreadsMustAppearInSameType,
   ])
 
   if (errors && errors[0]) {
@@ -81,7 +85,7 @@ export const parseTypeMapFromGraphQLDocument = (schema: GraphQLSchema, document:
   }
 
   const typeInfo = new TypeInfo(schema)
-  const aliasedDocument = visit(document, visitWithTypeInfo(typeInfo, {
+  const aliasedDocument: DocumentNode = visit(document, visitWithTypeInfo(typeInfo, {
     Field (node: FieldNode): FieldNode | undefined {
       const type: GraphQLCompositeType = typeInfo.getParentType()! as GraphQLCompositeType
       if (isUnionType(type)) {
@@ -115,16 +119,38 @@ export const parseTypeMapFromGraphQLDocument = (schema: GraphQLSchema, document:
 
   const map: GraphQLFragmentTypeMap = {}
   visit(aliasedDocument, {
-    FragmentDefinition (node: FragmentDefinitionNode) {
-      const typeName = node.typeCondition.name.value
-      if (!map[typeName]) {
-        map[typeName] = {
-          kind: Kind.SELECTION_SET,
-          selections: [],
+    SelectionSet: (selectionSet: SelectionSetNode) => {
+      if (selectionSet.selections.some(({ kind }) => kind === Kind.FRAGMENT_SPREAD)) {
+        const selections = []
+        for (const selection of selectionSet.selections) {
+          if (selection.kind === Kind.FRAGMENT_SPREAD) {
+            const fragment = aliasedDocument.definitions
+              .find((node) =>
+                node.kind === Kind.FRAGMENT_DEFINITION &&
+                node.name.value === selection.name.value
+              ) as FragmentDefinitionNode
+            selections.push(...fragment.selectionSet.selections)
+          } else {
+            selections.push(selection)
+          }
+        }
+        return {
+          ...selectionSet,
+          selections,
         }
       }
-
-      mergeSelectionSetInToSelectionSet(map[typeName], node.selectionSet)
+    },
+    FragmentDefinition: {
+      leave (node: FragmentDefinitionNode) {
+        const typeName = node.typeCondition.name.value
+        if (!map[typeName]) {
+          map[typeName] = {
+            kind: Kind.SELECTION_SET,
+            selections: [],
+          }
+        }
+        mergeSelectionSetInToSelectionSet(map[typeName], node.selectionSet)
+      },
     },
   })
 
