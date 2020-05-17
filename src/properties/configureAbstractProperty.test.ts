@@ -8,13 +8,13 @@ import {
 } from 'graphql'
 import { graphQLAutoRequesterMeta } from '../ObjectType'
 import GraphQLAutoRequester, { AutoGraphQLObjectType } from '..'
-import { lazyProperty } from '../utils'
+import LazyPromise from '../LazyPromise'
 import { getInitialSelections, canonicalizeRequestedFields } from '../fragmentTypemap'
 import { resolveField } from '../resolveField'
 
 import { configureAbstractProperty } from './configureAbstractProperty'
 
-jest.mock('../utils')
+jest.mock('../LazyPromise')
 jest.mock('../fragmentTypemap')
 jest.mock('../resolveField')
 
@@ -43,7 +43,7 @@ describe('configureAbstractProperty', () => {
       },
     }
     ;(resolveField as any).mockClear()
-    ;(lazyProperty as any).mockClear()
+    ;(LazyPromise as any).mockClear()
     ;(getInitialSelections as jest.Mock)
       .mockClear()
     ;(getInitialSelections as jest.Mock)
@@ -80,11 +80,12 @@ describe('configureAbstractProperty', () => {
     describe('that is nullable', () => {
       it('creates AutoGraphQLObjectType of the right concrete type when non-null', async () => {
         configureAbstractProperty(instance, propertyName, fieldName, underlyingType, inputArgs)
-        expect(lazyProperty).toHaveBeenCalledTimes(1)
-        expect(lazyProperty).toHaveBeenCalledWith(instance, propertyName, expect.anything())
+        expect(LazyPromise).toHaveBeenCalledTimes(1)
+        expect(LazyPromise).toHaveBeenCalledWith(expect.anything())
+        expect(instance[propertyName]).toBeInstanceOf(LazyPromise)
 
         ;(resolveField as jest.Mock).mockResolvedValue({ __typename: 'TestObject1' })
-        const fn = (lazyProperty as jest.Mock).mock.calls[0][2]
+        const fn = (LazyPromise as jest.Mock).mock.calls[0][0]
         const result = await fn()
         expect(result).toBeInstanceOf(AutoGraphQLObjectType)
 
@@ -101,11 +102,12 @@ describe('configureAbstractProperty', () => {
 
       it('resolves to null correctly', async () => {
         configureAbstractProperty(instance, propertyName, fieldName, underlyingType, inputArgs)
-        expect(lazyProperty).toHaveBeenCalledTimes(1)
-        expect(lazyProperty).toHaveBeenCalledWith(instance, propertyName, expect.anything())
+        expect(LazyPromise).toHaveBeenCalledTimes(1)
+        expect(LazyPromise).toHaveBeenCalledWith(expect.anything())
+        expect(instance[propertyName]).toBeInstanceOf(LazyPromise)
 
         ;(resolveField as jest.Mock).mockResolvedValue(null)
-        const fn = (lazyProperty as jest.Mock).mock.calls[0][2]
+        const fn = (LazyPromise as jest.Mock).mock.calls[0][0]
         const result = await fn()
         expect(result).toBeNull()
 
@@ -117,11 +119,12 @@ describe('configureAbstractProperty', () => {
     describe('that is non-null', () => {
       it('creates AutoGraphQLObjectType of the right concrete type when non-null', async () => {
         configureAbstractProperty(instance, propertyName, fieldName, underlyingType, inputArgs)
-        expect(lazyProperty).toHaveBeenCalledTimes(1)
-        expect(lazyProperty).toHaveBeenCalledWith(instance, propertyName, expect.anything())
+        expect(LazyPromise).toHaveBeenCalledTimes(1)
+        expect(LazyPromise).toHaveBeenCalledWith(expect.anything())
+        expect(instance[propertyName]).toBeInstanceOf(LazyPromise)
 
         ;(resolveField as jest.Mock).mockResolvedValue({ __typename: 'TestObject1' })
-        const fn = (lazyProperty as jest.Mock).mock.calls[0][2]
+        const fn = (LazyPromise as jest.Mock).mock.calls[0][0]
         const result = await fn()
         expect(result).toBeInstanceOf(AutoGraphQLObjectType)
 
@@ -138,11 +141,12 @@ describe('configureAbstractProperty', () => {
 
       it('resolves to null correctly', async () => {
         configureAbstractProperty(instance, propertyName, fieldName, underlyingType, inputArgs)
-        expect(lazyProperty).toHaveBeenCalledTimes(1)
-        expect(lazyProperty).toHaveBeenCalledWith(instance, propertyName, expect.anything())
+        expect(LazyPromise).toHaveBeenCalledTimes(1)
+        expect(LazyPromise).toHaveBeenCalledWith(expect.anything())
+        expect(instance[propertyName]).toBeInstanceOf(LazyPromise)
 
         ;(resolveField as jest.Mock).mockResolvedValue(null)
-        const fn = (lazyProperty as jest.Mock).mock.calls[0][2]
+        const fn = (LazyPromise as jest.Mock).mock.calls[0][0]
         const result = await fn()
         expect(result).toBeNull()
 
@@ -176,11 +180,12 @@ describe('configureAbstractProperty', () => {
     describe('that is nullable', () => {
       it('creates AutoGraphQLObjectType of the right concrete type when non-null', async () => {
         configureAbstractProperty(instance, propertyName, fieldName, underlyingType, inputArgs)
-        expect(lazyProperty).toHaveBeenCalledTimes(1)
-        expect(lazyProperty).toHaveBeenCalledWith(instance, propertyName, expect.anything())
+        expect(LazyPromise).toHaveBeenCalledTimes(1)
+        expect(LazyPromise).toHaveBeenCalledWith(expect.anything())
+        expect(instance[propertyName]).toBeInstanceOf(LazyPromise)
 
         ;(resolveField as jest.Mock).mockResolvedValue({ __typename: 'TestObject1' })
-        const fn = (lazyProperty as jest.Mock).mock.calls[0][2]
+        const fn = (LazyPromise as jest.Mock).mock.calls[0][0]
         const result = await fn()
         expect(result).toBeInstanceOf(AutoGraphQLObjectType)
 
@@ -196,11 +201,12 @@ describe('configureAbstractProperty', () => {
 
       it('resolves to null correctly', async () => {
         configureAbstractProperty(instance, propertyName, fieldName, underlyingType, inputArgs)
-        expect(lazyProperty).toHaveBeenCalledTimes(1)
-        expect(lazyProperty).toHaveBeenCalledWith(instance, propertyName, expect.anything())
+        expect(LazyPromise).toHaveBeenCalledTimes(1)
+        expect(LazyPromise).toHaveBeenCalledWith(expect.anything())
+        expect(instance[propertyName]).toBeInstanceOf(LazyPromise)
 
         ;(resolveField as jest.Mock).mockResolvedValue(null)
-        const fn = (lazyProperty as jest.Mock).mock.calls[0][2]
+        const fn = (LazyPromise as jest.Mock).mock.calls[0][0]
         const result = await fn()
         expect(result).toBeNull()
 
@@ -212,11 +218,12 @@ describe('configureAbstractProperty', () => {
     describe('that is non-null', () => {
       it('creates AutoGraphQLObjectType of the right concrete type when non-null', async () => {
         configureAbstractProperty(instance, propertyName, fieldName, underlyingType, inputArgs)
-        expect(lazyProperty).toHaveBeenCalledTimes(1)
-        expect(lazyProperty).toHaveBeenCalledWith(instance, propertyName, expect.anything())
+        expect(LazyPromise).toHaveBeenCalledTimes(1)
+        expect(LazyPromise).toHaveBeenCalledWith(expect.anything())
+        expect(instance[propertyName]).toBeInstanceOf(LazyPromise)
 
         ;(resolveField as jest.Mock).mockResolvedValue({ __typename: 'TestObject1' })
-        const fn = (lazyProperty as jest.Mock).mock.calls[0][2]
+        const fn = (LazyPromise as jest.Mock).mock.calls[0][0]
         const result = await fn()
         expect(result).toBeInstanceOf(AutoGraphQLObjectType)
 
@@ -233,11 +240,12 @@ describe('configureAbstractProperty', () => {
 
       it('resolves to null correctly', async () => {
         configureAbstractProperty(instance, propertyName, fieldName, underlyingType, inputArgs)
-        expect(lazyProperty).toHaveBeenCalledTimes(1)
-        expect(lazyProperty).toHaveBeenCalledWith(instance, propertyName, expect.anything())
+        expect(LazyPromise).toHaveBeenCalledTimes(1)
+        expect(LazyPromise).toHaveBeenCalledWith(expect.anything())
+        expect(instance[propertyName]).toBeInstanceOf(LazyPromise)
 
         ;(resolveField as jest.Mock).mockResolvedValue(null)
-        const fn = (lazyProperty as jest.Mock).mock.calls[0][2]
+        const fn = (LazyPromise as jest.Mock).mock.calls[0][0]
         const result = await fn()
         expect(result).toBeNull()
 

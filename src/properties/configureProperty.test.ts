@@ -4,12 +4,14 @@ import AutoGraphQLObjectType, { graphQLAutoRequesterMeta } from '../ObjectType'
 import { getRelatedFragments } from '../fragmentTypemap'
 import { resolveField } from '../resolveField'
 import { lazyProperty } from '../utils'
+import LazyPromise from '../LazyPromise'
 import { configureAbstractProperty } from './configureAbstractProperty'
 import { configureListProperty } from './configureListProperty'
 
 import { configureProperty } from './configureProperty'
 import GraphQLAutoRequester from '..'
 
+jest.mock('../LazyPromise')
 jest.mock('../utils')
 jest.mock('../fragmentTypemap')
 jest.mock('../resolveField')
@@ -32,7 +34,7 @@ describe('configureProperty', () => {
       },
     }
     ;(resolveField as any).mockClear()
-    ;(lazyProperty as any).mockClear()
+    ;(LazyPromise as any).mockClear()
     ;(configureAbstractProperty as any).mockClear()
     ;(configureListProperty as any).mockClear()
     ;(getRelatedFragments as any).mockClear()
@@ -49,7 +51,7 @@ describe('configureProperty', () => {
       serialize: (x) => x,
     })
 
-    it('sets a lazy property for null', () => {
+    it('sets a LazyPromise property for null', () => {
       const field: GraphQLField<any, any> = {
         args,
         description: '',
@@ -58,17 +60,18 @@ describe('configureProperty', () => {
         type,
       }
       configureProperty(instance, propertyName, fieldName, field, inputArgs)
-      expect(lazyProperty).toHaveBeenCalledTimes(1)
-      expect(lazyProperty).toHaveBeenCalledWith(instance, propertyName, expect.anything())
+      expect(LazyPromise).toHaveBeenCalledTimes(1)
+      expect(LazyPromise).toHaveBeenCalledWith(expect.anything())
+      expect(instance[propertyName]).toBeInstanceOf(LazyPromise)
 
       const result = Symbol('result')
       ;(resolveField as any).mockReturnValueOnce(result)
-      const fieldResult = (lazyProperty as jest.Mock).mock.calls[0][2]()
+      const fieldResult = (LazyPromise as jest.Mock).mock.calls[0][0]()
       expect(fieldResult).toBe(result)
       expect(resolveField).toHaveBeenCalledWith(instance, propertyName, fieldName, undefined, inputArgs)
     })
 
-    it('sets a lazy property for non-null', () => {
+    it('sets a LazyPromise property for non-null', () => {
       const field: GraphQLField<any, any> = {
         args,
         description: '',
@@ -77,12 +80,13 @@ describe('configureProperty', () => {
         type: new GraphQLNonNull(type),
       }
       configureProperty(instance, propertyName, fieldName, field, inputArgs)
-      expect(lazyProperty).toHaveBeenCalledTimes(1)
-      expect(lazyProperty).toHaveBeenCalledWith(instance, propertyName, expect.anything())
+      expect(LazyPromise).toHaveBeenCalledTimes(1)
+      expect(LazyPromise).toHaveBeenCalledWith(expect.anything())
+      expect(instance[propertyName]).toBeInstanceOf(LazyPromise)
 
       const result = Symbol('result')
       ;(resolveField as any).mockReturnValueOnce(result)
-      const fieldResult = (lazyProperty as jest.Mock).mock.calls[0][2]()
+      const fieldResult = (LazyPromise as jest.Mock).mock.calls[0][0]()
       expect(fieldResult).toBe(result)
       expect(resolveField).toHaveBeenCalledWith(instance, propertyName, fieldName, undefined, inputArgs)
     })
@@ -94,7 +98,7 @@ describe('configureProperty', () => {
       values: {},
     })
 
-    it('sets a lazy property for null', () => {
+    it('sets a LazyPromise property for null', () => {
       const field: GraphQLField<any, any> = {
         args,
         description: '',
@@ -103,17 +107,18 @@ describe('configureProperty', () => {
         type,
       }
       configureProperty(instance, propertyName, fieldName, field, inputArgs)
-      expect(lazyProperty).toHaveBeenCalledTimes(1)
-      expect(lazyProperty).toHaveBeenCalledWith(instance, propertyName, expect.anything())
+      expect(LazyPromise).toHaveBeenCalledTimes(1)
+      expect(LazyPromise).toHaveBeenCalledWith(expect.anything())
+      expect(instance[propertyName]).toBeInstanceOf(LazyPromise)
 
       const result = Symbol('result')
       ;(resolveField as any).mockReturnValueOnce(result)
-      const fieldResult = (lazyProperty as jest.Mock).mock.calls[0][2]()
+      const fieldResult = (LazyPromise as jest.Mock).mock.calls[0][0]()
       expect(fieldResult).toBe(result)
       expect(resolveField).toHaveBeenCalledWith(instance, propertyName, fieldName, undefined, inputArgs)
     })
 
-    it('sets a lazy property for non-null', () => {
+    it('sets a LazyPromise property for non-null', () => {
       const field: GraphQLField<any, any> = {
         args,
         description: '',
@@ -122,12 +127,13 @@ describe('configureProperty', () => {
         type: new GraphQLNonNull(type),
       }
       configureProperty(instance, propertyName, fieldName, field, inputArgs)
-      expect(lazyProperty).toHaveBeenCalledTimes(1)
-      expect(lazyProperty).toHaveBeenCalledWith(instance, propertyName, expect.anything())
+      expect(LazyPromise).toHaveBeenCalledTimes(1)
+      expect(LazyPromise).toHaveBeenCalledWith(expect.anything())
+      expect(instance[propertyName]).toBeInstanceOf(LazyPromise)
 
       const result = Symbol('result')
       ;(resolveField as any).mockReturnValueOnce(result)
-      const fieldResult = (lazyProperty as jest.Mock).mock.calls[0][2]()
+      const fieldResult = (LazyPromise as jest.Mock).mock.calls[0][0]()
       expect(fieldResult).toBe(result)
       expect(resolveField).toHaveBeenCalledWith(instance, propertyName, fieldName, undefined, inputArgs)
     })
@@ -140,7 +146,7 @@ describe('configureProperty', () => {
     })
 
     describe('when nullable', () => {
-      it('sets a lazy property for nullable that requires await, and returns null if it is null', async () => {
+      it('sets a LazyPromise for nullable, and returns null if it is null', async () => {
         const field: GraphQLField<any, any> = {
           args,
           description: '',
@@ -149,12 +155,13 @@ describe('configureProperty', () => {
           type,
         }
         configureProperty(instance, propertyName, fieldName, field, inputArgs)
-        expect(lazyProperty).toHaveBeenCalledTimes(1)
-        expect(lazyProperty).toHaveBeenCalledWith(instance, propertyName, expect.anything())
+        expect(LazyPromise).toHaveBeenCalledTimes(1)
+        expect(LazyPromise).toHaveBeenCalledWith(expect.anything())
+        expect(instance[propertyName]).toBeInstanceOf(LazyPromise)
 
         ;(resolveField as any).mockReturnValueOnce(null)
 
-        const fieldResultPromise = (lazyProperty as jest.Mock).mock.calls[0][2]()
+        const fieldResultPromise = (LazyPromise as jest.Mock).mock.calls[0][0]()
         await expect(fieldResultPromise).resolves.toBeNull()
         expect(resolveField).toHaveBeenCalledWith(expect.anything(), '__typename', '__typename', undefined, undefined)
         const subAutoGraphQLObjectType = (resolveField as jest.Mock).mock.calls[0][0] as AutoGraphQLObjectType
@@ -165,7 +172,7 @@ describe('configureProperty', () => {
         expect(resolveField).toHaveBeenCalledWith(instance, propertyName, fieldName, selectionSet, inputArgs)
       })
 
-      it('sets a lazy property for nullable that requires await', async () => {
+      it('sets a LazyPromise property for nullable', async () => {
         const field: GraphQLField<any, any> = {
           args,
           description: '',
@@ -174,13 +181,14 @@ describe('configureProperty', () => {
           type,
         }
         configureProperty(instance, propertyName, fieldName, field, inputArgs)
-        expect(lazyProperty).toHaveBeenCalledTimes(1)
-        expect(lazyProperty).toHaveBeenCalledWith(instance, propertyName, expect.anything())
+        expect(LazyPromise).toHaveBeenCalledTimes(1)
+        expect(LazyPromise).toHaveBeenCalledWith(expect.anything())
+        expect(instance[propertyName]).toBeInstanceOf(LazyPromise)
 
         const typename = Symbol('result')
         ;(resolveField as any).mockReturnValueOnce(typename)
 
-        const fieldResultPromise = (lazyProperty as jest.Mock).mock.calls[0][2]()
+        const fieldResultPromise = (LazyPromise as jest.Mock).mock.calls[0][0]()
         await expect(fieldResultPromise).resolves.toBeInstanceOf(AutoGraphQLObjectType)
         const fieldResult = await fieldResultPromise
         expect(resolveField).toHaveBeenCalledWith(fieldResult, '__typename', '__typename', undefined, undefined)

@@ -28,7 +28,7 @@ export const graphQLAutoRequesterMeta = Symbol('graphql-auto-requester-meta')
 
 export default class AutoGraphQLObjectType {
   [graphQLAutoRequesterMeta]: GraphQLAutoRequesterMeta
-  [index: string]: ElementReturnType | Promise<ElementReturnType> | ((args: any) => Promise<ElementReturnType>)
+  [index: string]: ElementReturnType | PromiseLike<ElementReturnType> | ((args: any) => PromiseLike<ElementReturnType>)
 
   constructor (
     parent: GraphQLAutoRequester,
