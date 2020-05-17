@@ -1,12 +1,12 @@
 import { AutoGraphQLObjectType } from '..'
-import { lazyProperty } from '../utils'
 import { resolveField } from '../resolveField'
 import { GraphQLObjectType, ArgumentNode, GraphQLAbstractType } from 'graphql'
 import { graphQLAutoRequesterMeta } from '../ObjectType'
 import { getInitialSelections, canonicalizeRequestedFields } from '../fragmentTypemap'
+import LazyPromise from '../LazyPromise'
 
 export const configureAbstractProperty = (instance: AutoGraphQLObjectType, propertyName: string, fieldName: string, type: GraphQLAbstractType, args?: ArgumentNode[]) => {
-  lazyProperty(instance, propertyName, async () => {
+  instance[propertyName] = new LazyPromise(async () => {
     const selectionSet = getInitialSelections(instance[graphQLAutoRequesterMeta].parent, type)
     const result = await resolveField(instance, propertyName, fieldName, selectionSet, args)
     if (!result) {

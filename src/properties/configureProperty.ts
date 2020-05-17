@@ -10,6 +10,7 @@ import {
 } from 'graphql'
 
 import { AutoGraphQLObjectType } from '..'
+import LazyPromise from '../LazyPromise'
 import { lazyProperty } from '../utils'
 import { resolveField } from '../resolveField'
 import { configureListProperty } from './configureListProperty'
@@ -25,7 +26,7 @@ export const configureProperty = (instance: AutoGraphQLObjectType, propertyName:
   if (isAbstractType(baseType)) {
     configureAbstractProperty(instance, propertyName, fieldName, baseType, args)
   } else if (isLeafType(baseType)) {
-    lazyProperty(instance, propertyName, () => resolveField(instance, propertyName, fieldName, undefined, args))
+    instance[propertyName] = new LazyPromise(() => resolveField(instance, propertyName, fieldName, undefined, args))
   } else if (isListType(baseType)) {
     configureListProperty(instance, propertyName, fieldName, baseType, args)
   } else if (isObjectType(baseType)) {
@@ -37,7 +38,7 @@ export const configureProperty = (instance: AutoGraphQLObjectType, propertyName:
         _baseType,
       ))
     } else {
-      lazyProperty(instance, propertyName, async () => {
+      instance[propertyName] = new LazyPromise(async () => {
         const subField = new AutoGraphQLObjectType(
           instance[graphQLAutoRequesterMeta].parent,
           (selectionSet) => resolveField(instance, propertyName, fieldName, selectionSet, args),

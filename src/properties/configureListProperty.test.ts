@@ -11,13 +11,13 @@ import {
 } from 'graphql'
 import { graphQLAutoRequesterMeta } from '../ObjectType'
 import GraphQLAutoRequester, { AutoGraphQLObjectType } from '..'
-import { lazyProperty } from '../utils'
+import LazyPromise from '../LazyPromise'
 import { getInitialSelections, canonicalizeRequestedFields } from '../fragmentTypemap'
 import { resolveField } from '../resolveField'
 
 import { configureListProperty } from './configureListProperty'
 
-jest.mock('../utils')
+jest.mock('../LazyPromise')
 jest.mock('../fragmentTypemap')
 jest.mock('../resolveField')
 
@@ -46,7 +46,7 @@ describe('configureListProperty', () => {
       },
     }
     ;(resolveField as any).mockClear()
-    ;(lazyProperty as any).mockClear()
+    ;(LazyPromise as any).mockClear()
     ;(getInitialSelections as jest.Mock)
       .mockClear()
     ;(getInitialSelections as jest.Mock)
@@ -67,11 +67,12 @@ describe('configureListProperty', () => {
 
       it('Forwards the call to the underlying response', async () => {
         configureListProperty(instance, propertyName, fieldName, type, inputArgs)
-        expect(lazyProperty).toHaveBeenCalledTimes(1)
-        expect(lazyProperty).toHaveBeenCalledWith(instance, propertyName, expect.anything())
+        expect(LazyPromise).toHaveBeenCalledTimes(1)
+        expect(LazyPromise).toHaveBeenCalledWith(expect.anything())
+        expect(instance[propertyName]).toBeInstanceOf(LazyPromise)
 
         ;(resolveField as jest.Mock).mockResolvedValue([1, 2, 3, 'a', null])
-        const fn = (lazyProperty as jest.Mock).mock.calls[0][2]
+        const fn = (LazyPromise as jest.Mock).mock.calls[0][0]
         await expect(fn()).resolves.toEqual([1, 2, 3, 'a', null])
         expect(resolveField).toHaveBeenCalledTimes(1)
         expect(resolveField).toHaveBeenCalledWith(instance, propertyName, fieldName, undefined, inputArgs)
@@ -83,11 +84,12 @@ describe('configureListProperty', () => {
 
       it('Forwards the call to the underlying response', async () => {
         configureListProperty(instance, propertyName, fieldName, type, inputArgs)
-        expect(lazyProperty).toHaveBeenCalledTimes(1)
-        expect(lazyProperty).toHaveBeenCalledWith(instance, propertyName, expect.anything())
+        expect(LazyPromise).toHaveBeenCalledTimes(1)
+        expect(LazyPromise).toHaveBeenCalledWith(expect.anything())
+        expect(instance[propertyName]).toBeInstanceOf(LazyPromise)
 
         ;(resolveField as jest.Mock).mockResolvedValue([1, 2, 3, 'a'])
-        const fn = (lazyProperty as jest.Mock).mock.calls[0][2]
+        const fn = (LazyPromise as jest.Mock).mock.calls[0][0]
         await expect(fn()).resolves.toEqual([1, 2, 3, 'a'])
         expect(resolveField).toHaveBeenCalledTimes(1)
         expect(resolveField).toHaveBeenCalledWith(instance, propertyName, fieldName, undefined, inputArgs)
@@ -108,11 +110,12 @@ describe('configureListProperty', () => {
 
       it('Forwards the call to the underlying response', async () => {
         configureListProperty(instance, propertyName, fieldName, type, inputArgs)
-        expect(lazyProperty).toHaveBeenCalledTimes(1)
-        expect(lazyProperty).toHaveBeenCalledWith(instance, propertyName, expect.anything())
+        expect(LazyPromise).toHaveBeenCalledTimes(1)
+        expect(LazyPromise).toHaveBeenCalledWith(expect.anything())
+        expect(instance[propertyName]).toBeInstanceOf(LazyPromise)
 
         ;(resolveField as jest.Mock).mockResolvedValue(['A', 'B', null])
-        const fn = (lazyProperty as jest.Mock).mock.calls[0][2]
+        const fn = (LazyPromise as jest.Mock).mock.calls[0][0]
         await expect(fn()).resolves.toEqual(['A', 'B', null])
         expect(resolveField).toHaveBeenCalledTimes(1)
         expect(resolveField).toHaveBeenCalledWith(instance, propertyName, fieldName, undefined, inputArgs)
@@ -124,11 +127,12 @@ describe('configureListProperty', () => {
 
       it('Forwards the call to the underlying response', async () => {
         configureListProperty(instance, propertyName, fieldName, type, inputArgs)
-        expect(lazyProperty).toHaveBeenCalledTimes(1)
-        expect(lazyProperty).toHaveBeenCalledWith(instance, propertyName, expect.anything())
+        expect(LazyPromise).toHaveBeenCalledTimes(1)
+        expect(LazyPromise).toHaveBeenCalledWith(expect.anything())
+        expect(instance[propertyName]).toBeInstanceOf(LazyPromise)
 
         ;(resolveField as jest.Mock).mockResolvedValue(['A', 'B'])
-        const fn = (lazyProperty as jest.Mock).mock.calls[0][2]
+        const fn = (LazyPromise as jest.Mock).mock.calls[0][0]
         await expect(fn()).resolves.toEqual(['A', 'B'])
         expect(resolveField).toHaveBeenCalledTimes(1)
         expect(resolveField).toHaveBeenCalledWith(instance, propertyName, fieldName, undefined, inputArgs)
@@ -153,11 +157,12 @@ describe('configureListProperty', () => {
 
       it('creates AutoGraphQLObjectType when non-null', async () => {
         configureListProperty(instance, propertyName, fieldName, type, inputArgs)
-        expect(lazyProperty).toHaveBeenCalledTimes(1)
-        expect(lazyProperty).toHaveBeenCalledWith(instance, propertyName, expect.anything())
+        expect(LazyPromise).toHaveBeenCalledTimes(1)
+        expect(LazyPromise).toHaveBeenCalledWith(expect.anything())
+        expect(instance[propertyName]).toBeInstanceOf(LazyPromise)
 
         ;(resolveField as jest.Mock).mockResolvedValue([{ __typename: 'TestObject' }, null])
-        const fn = (lazyProperty as jest.Mock).mock.calls[0][2]
+        const fn = (LazyPromise as jest.Mock).mock.calls[0][0]
         const result = await fn()
         expect(result).toBeInstanceOf(Array)
         expect(result).toHaveLength(2)
@@ -181,11 +186,12 @@ describe('configureListProperty', () => {
 
       it('creates AutoGraphQLObjectType', async () => {
         configureListProperty(instance, propertyName, fieldName, type, inputArgs)
-        expect(lazyProperty).toHaveBeenCalledTimes(1)
-        expect(lazyProperty).toHaveBeenCalledWith(instance, propertyName, expect.anything())
+        expect(LazyPromise).toHaveBeenCalledTimes(1)
+        expect(LazyPromise).toHaveBeenCalledWith(expect.anything())
+        expect(instance[propertyName]).toBeInstanceOf(LazyPromise)
 
         ;(resolveField as jest.Mock).mockResolvedValue([{ __typename: 'TestObject' }, { __typename: 'TestObject' }])
-        const fn = (lazyProperty as jest.Mock).mock.calls[0][2]
+        const fn = (LazyPromise as jest.Mock).mock.calls[0][0]
         const result = await fn()
         expect(result).toBeInstanceOf(Array)
         expect(result).toHaveLength(2)
@@ -235,11 +241,12 @@ describe('configureListProperty', () => {
 
       it('creates AutoGraphQLObjectType of the right concrete types when non-null', async () => {
         configureListProperty(instance, propertyName, fieldName, type, inputArgs)
-        expect(lazyProperty).toHaveBeenCalledTimes(1)
-        expect(lazyProperty).toHaveBeenCalledWith(instance, propertyName, expect.anything())
+        expect(LazyPromise).toHaveBeenCalledTimes(1)
+        expect(LazyPromise).toHaveBeenCalledWith(expect.anything())
+        expect(instance[propertyName]).toBeInstanceOf(LazyPromise)
 
         ;(resolveField as jest.Mock).mockResolvedValue([{ __typename: 'TestObject1' }, { __typename: 'TestObject2' }, null])
-        const fn = (lazyProperty as jest.Mock).mock.calls[0][2]
+        const fn = (LazyPromise as jest.Mock).mock.calls[0][0]
         const result = await fn()
         expect(result).toBeInstanceOf(Array)
         expect(result).toHaveLength(3)
@@ -272,11 +279,12 @@ describe('configureListProperty', () => {
 
       it('creates AutoGraphQLObjectType of the right concrete types', async () => {
         configureListProperty(instance, propertyName, fieldName, type, inputArgs)
-        expect(lazyProperty).toHaveBeenCalledTimes(1)
-        expect(lazyProperty).toHaveBeenCalledWith(instance, propertyName, expect.anything())
+        expect(LazyPromise).toHaveBeenCalledTimes(1)
+        expect(LazyPromise).toHaveBeenCalledWith(expect.anything())
+        expect(instance[propertyName]).toBeInstanceOf(LazyPromise)
 
         ;(resolveField as jest.Mock).mockResolvedValue([{ __typename: 'TestObject1' }, { __typename: 'TestObject2' }])
-        const fn = (lazyProperty as jest.Mock).mock.calls[0][2]
+        const fn = (LazyPromise as jest.Mock).mock.calls[0][0]
         const result = await fn()
         expect(result).toBeInstanceOf(Array)
         expect(result).toHaveLength(2)
@@ -331,11 +339,12 @@ describe('configureListProperty', () => {
 
       it('creates AutoGraphQLObjectType of the right concrete types when non-null', async () => {
         configureListProperty(instance, propertyName, fieldName, type, inputArgs)
-        expect(lazyProperty).toHaveBeenCalledTimes(1)
-        expect(lazyProperty).toHaveBeenCalledWith(instance, propertyName, expect.anything())
+        expect(LazyPromise).toHaveBeenCalledTimes(1)
+        expect(LazyPromise).toHaveBeenCalledWith(expect.anything())
+        expect(instance[propertyName]).toBeInstanceOf(LazyPromise)
 
         ;(resolveField as jest.Mock).mockResolvedValue([{ __typename: 'TestObject1' }, { __typename: 'TestObject2' }, null])
-        const fn = (lazyProperty as jest.Mock).mock.calls[0][2]
+        const fn = (LazyPromise as jest.Mock).mock.calls[0][0]
         const result = await fn()
         expect(result).toBeInstanceOf(Array)
         expect(result).toHaveLength(3)
@@ -368,11 +377,12 @@ describe('configureListProperty', () => {
 
       it('creates AutoGraphQLObjectType of the right concrete types', async () => {
         configureListProperty(instance, propertyName, fieldName, type, inputArgs)
-        expect(lazyProperty).toHaveBeenCalledTimes(1)
-        expect(lazyProperty).toHaveBeenCalledWith(instance, propertyName, expect.anything())
+        expect(LazyPromise).toHaveBeenCalledTimes(1)
+        expect(LazyPromise).toHaveBeenCalledWith(expect.anything())
+        expect(instance[propertyName]).toBeInstanceOf(LazyPromise)
 
         ;(resolveField as jest.Mock).mockResolvedValue([{ __typename: 'TestObject1' }, { __typename: 'TestObject2' }])
-        const fn = (lazyProperty as jest.Mock).mock.calls[0][2]
+        const fn = (LazyPromise as jest.Mock).mock.calls[0][0]
         const result = await fn()
         expect(result).toBeInstanceOf(Array)
         expect(result).toHaveLength(2)
