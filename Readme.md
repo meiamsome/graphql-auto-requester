@@ -206,3 +206,35 @@ executor on our new service.
 Importantly, the request for `__typename` does NOT result in a further request to the upstream service, as we can tell
 from the schema that this is valid and there is no need to execute a request for any subfields as `__typename` is simply
 resolved.
+
+### Delegation
+As an optimization, if you are using `graphql-auto-requester` for resolving parts of a graphql query, you can use built in delegation to reduce the amount of calls out to an external service. For example, you could do the following:
+
+```js
+import GraphQLAutoRequester, { delegate } from 'graphql-auto-requester'
+
+// Somewhere else
+const requester = new GraphQLAutoRequester(schema)
+
+// And, in your resolvers you can delegate your queries like so:
+const resolvers = {
+  Query: {
+    // ...
+    // Delegate a root query
+    delegatedQuery: (_, args, context, info) => {
+      return delegate(requester.doAQuery, info)
+    }
+  },
+  ArbitraryType: {
+    // Delegate an arbitrary field at any point in your graph.
+    delegateField: (instance, args, context, info) => {
+      return delegate(
+        requester.
+          arbitraryTypeById({ instance.id }).
+          delegatedField,
+        info,
+      )
+    }
+  },
+}
+```
