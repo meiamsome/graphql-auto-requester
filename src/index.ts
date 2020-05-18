@@ -13,6 +13,7 @@ import {
   dataMerge,
 } from './utils'
 
+export * from './meta'
 export { default as AutoGraphQLObjectType } from './ObjectType'
 
 export type GraphQLAutoRequesterSettings = {
