@@ -15,6 +15,8 @@ jest.mock('./ObjectType')
 jest.mock('./selectionSet')
 jest.mock('./utils')
 
+const contextValue = Symbol('contextValue')
+
 describe('GraphQLAutoRequester', () => {
   afterEach(() => {
     ;(leftOuterJoinSelectionSets as jest.Mock).mockReset()
@@ -46,7 +48,9 @@ describe('GraphQLAutoRequester', () => {
       getQueryType: () => null,
     } as GraphQLSchema
 
-    const requester = new GraphQLAutoRequester(schema)
+    const requester = new GraphQLAutoRequester(schema, {
+      contextValue,
+    })
 
     describe('execute', () => {
       beforeEach(() => {
@@ -93,6 +97,7 @@ describe('GraphQLAutoRequester', () => {
         expect(execute).toHaveBeenCalledWith({
           document,
           schema,
+          contextValue,
         })
       })
     })
@@ -221,6 +226,16 @@ describe('GraphQLAutoRequester', () => {
           nextRequestSelectionSet,
           selectionSet
         )
+      })
+    })
+
+    describe('setContext', () => {
+      const requester = new GraphQLAutoRequester(schema)
+
+      it('changes the context', () => {
+        requester.setContext(contextValue)
+
+        expect(requester.settings.contextValue).toBe(contextValue)
       })
     })
   })

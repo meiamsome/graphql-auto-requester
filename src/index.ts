@@ -17,7 +17,8 @@ export * from './meta'
 export { default as AutoGraphQLObjectType } from './ObjectType'
 
 export type GraphQLAutoRequesterSettings = {
-  fragments?: string | DocumentNode
+  fragments?: string | DocumentNode,
+  contextValue?: any,
 }
 
 export class GraphQLAutoRequester {
@@ -53,6 +54,7 @@ export class GraphQLAutoRequester {
     const result = await execute({
       document,
       schema: this.schema,
+      contextValue: this.settings.contextValue,
     })
 
     mergeSelectionSetInToSelectionSet(this._fetchedSelectionSet, (document.definitions[0] as OperationDefinitionNode).selectionSet)
@@ -104,6 +106,10 @@ export class GraphQLAutoRequester {
     mergeSelectionSetInToSelectionSet(nextRequestCurrentSelectionSet, selectionSet)
 
     return this._nextRequestPromise!
+  }
+
+  setContext (contextValue: any) {
+    this.settings.contextValue = contextValue
   }
 }
 
