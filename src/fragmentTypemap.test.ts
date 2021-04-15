@@ -387,6 +387,13 @@ describe('canonicalizeRequestedFields', () => {
           kind: Kind.FIELD,
           name: {
             kind: Kind.NAME,
+            value: '__typename',
+          },
+          selectionSet: undefined,
+        }, {
+          kind: Kind.FIELD,
+          name: {
+            kind: Kind.NAME,
             value: 'interfaceField',
           },
           selectionSet: undefined,
@@ -437,6 +444,13 @@ describe('canonicalizeRequestedFields', () => {
       .toEqual({
         kind: Kind.SELECTION_SET,
         selections: [{
+          kind: Kind.FIELD,
+          name: {
+            kind: Kind.NAME,
+            value: '__typename',
+          },
+          selectionSet: undefined,
+        }, {
           kind: Kind.INLINE_FRAGMENT,
           typeCondition: {
             kind: Kind.NAMED_TYPE,
