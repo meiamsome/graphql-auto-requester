@@ -224,7 +224,13 @@ export const canonicalizeRequestedFields = (rootType: GraphQLCompositeType, conc
   }
   const rootSelections = {
     kind: Kind.SELECTION_SET,
-    selections: [],
+    selections: [{
+      kind: Kind.FIELD,
+      name: {
+        kind: Kind.NAME,
+        value: '__typename',
+      },
+    }],
   }
   const fragmentSelections = {
     kind: Kind.SELECTION_SET,
