@@ -4,7 +4,7 @@ import { buildSchema } from 'graphql/utilities'
 import GraphQLAutoRequester from '../../src/index'
 
 describe('For proxied schemas', () => {
-  it('resolves an union multiple times', async () => {
+  it('requests __typename for a union multiple times', async () => {
     const schemaDocument = `
       type A {
         value: Int
@@ -48,7 +48,7 @@ describe('For proxied schemas', () => {
     expect(requester.execute).toHaveBeenCalledTimes(2)
   })
 
-  it('resolves an interface multiple times', async () => {
+  it('requests __typename for an interface multiple times', async () => {
     const schemaDocument = `
       interface TestInterface {
         value: Int
